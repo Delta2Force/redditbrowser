@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>redditbrowser</groupId>
   <artifactId>redditbrowser</artifactId>
@@ -17,7 +18,7 @@ Browse Reddit in Minecraft.</description>
           <target>1.8</target>
         </configuration>
       </plugin>
-      
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -30,33 +31,51 @@ Browse Reddit in Minecraft.</description>
             </goals>
             <configuration>
               <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>shaded</shadedClassifierName> <!-- Any name that makes sense -->
+              <shadedClassifierName>shaded</shadedClassifierName>              <!-- Any name that makes sense -->
             </configuration>
           </execution>
         </executions>
       </plugin>
     </plugins>
   </build>
-  
+
   <repositories>
-  	<repository>
-  		<id>repo1</id>
-  		<name>i hate maven</name>
-  		<url>http://repo.spring.io/libs-release/</url>
-  	</repository>
-  	<repository>
-  		<id>repo2</id>
-  		<name>IAHTRE</name>
-  		<url>http://central.maven.org/maven2/</url>
-  	</repository>
+    <repository>
+      <id>repo1</id>
+      <name>i hate maven</name>
+      <url>http://repo.spring.io/libs-release/</url>
+    </repository>
+    <repository>
+      <id>repo2</id>
+      <name>IAHTRE</name>
+      <url>http://central.maven.org/maven2/</url>
+    </repository>
+    <repository>
+      <id>spigot-repo</id>
+      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
   </repositories>
-  
+
   <dependencies>
-  	<dependency>
-    <groupId>net.dean.jraw</groupId>
-    <artifactId>JRAW</artifactId>
-    <version>1.1.0</version>
-</dependency>
+    <dependency>
+      <groupId>net.dean.jraw</groupId>
+      <artifactId>JRAW</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bukkit</groupId>
+      <artifactId>bukkit</artifactId>
+      <version>1.14.4-R0.1-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.spigotmc</groupId>
+      <artifactId>spigot-api</artifactId>
+      <version>1.14.4-R0.1-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
-    
+
 </project>
