@@ -1,0 +1,14 @@
+name: RedditBrowser
+author: u/DeltaTwoForce
+version: 1.0
+api-version: 1.13
+main: me.delta2force.redditbrowser.RedditBrowserPlugin
+
+commands:
+ reddit:
+  description: browse reddit in minecraft!
+  permission: redditbrowser.browse
+
+permissions:
+ redditbrowser.browse:
+  default: op
