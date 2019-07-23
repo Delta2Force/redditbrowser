@@ -184,7 +184,7 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener{
 			spawnHologram(bl.clone().add(.5, .5, .5), title);
 		}
 		
-		spawnHologram(bl.clone().add(.5, -.25, .5), "§6"+s.getScore());
+		spawnHologram(bl.clone().add(.5, -.25, .5), "" + (char)(0xfeff00a7) + "6" + s.getScore());
 		
 		/*
 		Block sig = l.clone().add(-2,-1,-3).getBlock();
