@@ -9,7 +9,7 @@
   <version>1.0.0</version>
   <packaging>jar</packaging>
 
-  <name>McAuth</name>
+  <name>RedditBrowser</name>
 
   <description>Browse reddit in minecraft
     Browse Reddit in Minecraft.</description>
