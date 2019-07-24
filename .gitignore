@@ -1,4 +1,6 @@
 bin
 .settings
 .target
+target
 .project
+.vscode
