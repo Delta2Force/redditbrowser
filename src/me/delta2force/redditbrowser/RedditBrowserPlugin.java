@@ -1,6 +1,7 @@
 package me.delta2force.redditbrowser;
 
 import me.delta2force.redditbrowser.generator.RedditGenerator;
+import me.delta2force.redditbrowser.listeners.SignChange;
 import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
@@ -32,7 +33,6 @@ import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -44,22 +44,27 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
 public class RedditBrowserPlugin extends JavaPlugin implements Listener {
-    private HashMap<UUID, Location> beforeTPLocation = new HashMap<>();
-    private HashMap<UUID, PlayerInventory> beforeTPInventory = new HashMap<>();
-    private ArrayList<UUID> redditBrowsers = new ArrayList<>();
-    private HashMap<Location, String> submissionIDs = new HashMap<>();
-    public static ArrayList<BukkitTask> task = new ArrayList<>();
+
+    private Map<UUID, Location> beforeTPLocation = new HashMap<>();
+    private Map<UUID, PlayerInventory> beforeTPInventory = new HashMap<>();
+    private Map<Location, String> submissionIDs = new HashMap<>();
+
+    private List<UUID> redditBrowsers = new ArrayList<>();
+
+    private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
 
     @Override
     public void onEnable() {
         // Save the default config
         saveDefaultConfig();
-        this.getServer().getPluginManager().registerEvents(this, this);
+        getServer().getPluginManager().registerEvents(new SignChange(this), this);
     }
 
     @Override
@@ -357,19 +362,6 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener {
 		}
 	}*/
 
-    @EventHandler
-    public void onSignPlaced(SignChangeEvent e) {
-        if (redditBrowsers.contains(e.getPlayer().getUniqueId())) {
-            if (e.getLines()[0].startsWith("r/")) {
-                String sub = e.getLines()[0].replaceFirst("r/", "");
-                e.getPlayer().setGameMode(GameMode.SPECTATOR);
-                e.getPlayer().sendMessage(ChatColor.YELLOW + "Please wait...");
-                e.getPlayer().teleport(e.getPlayer().getLocation().add(0, 400, 0));
-                task.add(this.getServer().getScheduler().runTaskAsynchronously(this, () -> createTowerAndTP(e.getPlayer(), sub, e.getPlayer().getWorld())));
-            }
-        }
-    }
-
     public Location roundedLocation(Location loc) {
         return new Location(loc.getWorld(), (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
@@ -394,5 +386,25 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener {
         redditBrowsers.remove(p.getUniqueId());
         beforeTPLocation.remove(p.getUniqueId());
         beforeTPInventory.remove(p.getUniqueId());
+    }
+
+    public Map<UUID, Location> getBeforeTPLocation() {
+        return beforeTPLocation;
+    }
+
+    public Map<UUID, PlayerInventory> getBeforeTPInventory() {
+        return beforeTPInventory;
+    }
+
+    public Map<Location, String> getSubmissionIDs() {
+        return submissionIDs;
+    }
+
+    public List<UUID> getRedditBrowsers() {
+        return redditBrowsers;
+    }
+
+    public List<BukkitTask> getTask() {
+        return task;
     }
 }
