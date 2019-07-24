@@ -1,6 +1,7 @@
 package me.delta2force.redditbrowser;
 
 import me.delta2force.redditbrowser.generator.RedditGenerator;
+import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
 import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.RedditClient;
@@ -9,6 +10,7 @@ import net.dean.jraw.http.UserAgent;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.models.Submission;
 import net.dean.jraw.models.SubredditSort;
+import net.dean.jraw.models.TimePeriod;
 import net.dean.jraw.oauth.Credentials;
 import net.dean.jraw.oauth.OAuthHelper;
 import net.dean.jraw.pagination.Stream;
@@ -50,7 +52,7 @@ import java.util.UUID;
 public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
-    private Map<UUID, PlayerInventory> beforeTPInventory = new HashMap<>();
+    private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
     private Map<Location, String> submissionIDs = new HashMap<>();
 
     private List<UUID> redditBrowsers = new ArrayList<>();
@@ -98,8 +100,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
                     kickOut(p);
                 } else {
                     beforeTPLocation.put(p.getUniqueId(), p.getLocation());
-                    beforeTPInventory.put(p.getUniqueId(), p.getInventory());
+                    beforeTPInventory.put(p.getUniqueId(), new RedditInventory(p.getInventory()));
                     redditBrowsers.add(p.getUniqueId());
+                    p.getInventory().clear();
                     setupReddit(p);
                 }
             }
@@ -180,34 +183,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
 
         spawnHologram(bl.clone().add(.5, -.25, .5), "" + (char) (0xfeff00a7) + "6" + s.getScore());
-		
-		/*
-		Block sig = l.clone().add(-2,-1,-3).getBlock();
-		sig.setType(Material.OAK_WALL_SIGN);
-		Sign sign = (Sign) sig.getState();
-		String title = s.getTitle();
-		if(title.length() > 15) {
-			sign.setLine(0, title.substring(0, 15));
-			if(title.length() > 30) {
-				sign.setLine(1, title.substring(15, 30));
-				if(title.length() > 45) {
-					sign.setLine(2, title.substring(30, 45));
-				}else {
-					sign.setLine(2, title.substring(30));
-				}
-			}else {
-				sign.setLine(1, title.substring(15));
-			}
-		}else {
-			sign.setLine(0, title);
-		}
-		sign.setLine(3, "u/" + s.getAuthor());
-		Directional d = (Directional) sig.getBlockData();
-		d.setFacing(BlockFace.SOUTH);
-		sig.setBlockData(d);
-		sig.getState().update();
-		sign.update();
-		*/
 
         l.getWorld().getBlockAt(l.clone().add(-2, -2, -2)).setType(Material.POLISHED_ANDESITE);
 
@@ -366,13 +341,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
         p.sendMessage(ChatColor.GREEN + "Goodbye reddit!");
         p.teleport(beforeTPLocation.get(p.getUniqueId()));
         p.getInventory().clear();
-        PlayerInventory beforeTP = beforeTPInventory.get(p.getUniqueId());
-        p.getInventory().setArmorContents(beforeTP.getArmorContents());
-        p.getInventory().setContents(beforeTP.getContents());
-        p.getInventory().setStorageContents(beforeTP.getStorageContents());
-        p.getInventory().setExtraContents(beforeTP.getExtraContents());
-        p.getInventory().setItemInOffHand(beforeTP.getItemInOffHand());
-
+        RedditInventory beforeTP = beforeTPInventory.get(p.getUniqueId());
+        beforeTP.apply(p);
         redditBrowsers.remove(p.getUniqueId());
         beforeTPLocation.remove(p.getUniqueId());
         beforeTPInventory.remove(p.getUniqueId());
@@ -382,7 +352,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         return beforeTPLocation;
     }
 
-    public Map<UUID, PlayerInventory> getBeforeTPInventory() {
+    public Map<UUID, RedditInventory> getBeforeTPInventory() {
         return beforeTPInventory;
     }
 
