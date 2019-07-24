@@ -1,7 +1,7 @@
 package me.delta2force.redditbrowser;
 
 import me.delta2force.redditbrowser.generator.RedditGenerator;
-import me.delta2force.redditbrowser.listeners.SignChange;
+import me.delta2force.redditbrowser.listeners.EventListener;
 import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
@@ -31,9 +31,6 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.BookMeta;
@@ -49,7 +46,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-public class RedditBrowserPlugin extends JavaPlugin implements Listener {
+public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, PlayerInventory> beforeTPInventory = new HashMap<>();
@@ -64,7 +61,7 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         // Save the default config
         saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(new SignChange(this), this);
+        getServer().getPluginManager().registerEvents(new EventListener(this), this);
     }
 
     @Override
@@ -359,12 +356,6 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener {
 
     public Location roundedLocation(Location loc) {
         return new Location(loc.getWorld(), (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
-    }
-
-    @EventHandler
-    public void leave(PlayerQuitEvent e) {
-        Player p = e.getPlayer();
-        kickOut(p);
     }
 
     public void kickOut(Player p) {

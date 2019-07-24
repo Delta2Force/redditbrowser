@@ -7,12 +7,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
-public class SignChange implements Listener {
+public class EventListener implements Listener {
 
     private RedditBrowserPlugin reddit;
 
-    public SignChange(RedditBrowserPlugin reddit) {
+    public EventListener(RedditBrowserPlugin reddit) {
         this.reddit = reddit;
     }
 
@@ -49,6 +50,12 @@ public class SignChange implements Listener {
             reddit.getTask().add(reddit.getServer().getScheduler().runTaskAsynchronously(reddit, () -> reddit.createTowerAndTP(player, sub, player.getWorld())));
         }
 
+    }
+
+    @EventHandler
+    public void onLeave(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        reddit.kickOut(player);
     }
 
 }
