@@ -17,7 +17,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.block.impl.CraftLadder;
+import org.bukkit.block.data.type.Ladder;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
@@ -151,7 +151,7 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener{
 		for(int y = l.getBlockY();y>l.getBlockY()-4;y--) {
 			Block block = new Location(l.getWorld(),l.getBlockX()-2, y, l.getBlockZ()-1).getBlock();
 			block.setType(Material.LADDER);
-			CraftLadder ladder = (CraftLadder) block.getBlockData();
+			Ladder ladder = (Ladder) block.getBlockData();
 			ladder.setFacing(BlockFace.NORTH);
 			block.setBlockData(ladder);
 			block.getState().update();
