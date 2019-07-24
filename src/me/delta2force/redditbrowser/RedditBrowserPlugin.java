@@ -41,6 +41,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -66,7 +67,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        for (UUID u : redditBrowsers) {
+    	Iterator<UUID> redditBrowserIterator = redditBrowsers.iterator();
+        while(redditBrowserIterator.hasNext()) {
+        	UUID u = redditBrowserIterator.next();
             Player p = Bukkit.getPlayer(u);
             kickOut(p);
         }
