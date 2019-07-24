@@ -53,18 +53,19 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
-    private Map<Location, String> submissionIDs = new HashMap<>();
 
     private List<UUID> redditBrowsers = new ArrayList<>();
 
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
+    public EventListener listener;
 
     @Override
     public void onEnable() {
         // Save the default config
         saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(new EventListener(this), this);
+        listener = new EventListener(this);
+        Bukkit.getServer().getPluginManager().registerEvents(listener, this);
     }
 
     @Override
@@ -78,7 +79,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         beforeTPLocation.clear();
         beforeTPInventory.clear();
         redditBrowsers.clear();
-        submissionIDs.clear();
+        listener = null;
     }
 
     public void attemptConnect() {
@@ -139,7 +140,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         as.setGravity(false);
         as.setVisible(false);
     }
-
+    
     public void setRoom(Location l, String submissionId) {
         Submission s = reddit.submission(submissionId).inspect();
         RootCommentNode rcn = reddit.submission(submissionId).comments();
@@ -161,8 +162,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
         Chest chest = (Chest) b.getState();
-
-        submissionIDs.put(b.getLocation(), s.getId());
 
         Location bl = b.getLocation();
         String title = s.getTitle();
@@ -270,24 +269,25 @@ public class RedditBrowserPlugin extends JavaPlugin {
             final int index = i;
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 setRoom(l.clone().add(0, -4 * index, 0), s.getId());
+                p.sendMessage(""+ChatColor.DARK_GREEN + (index+1) + " / 27 posts built");
+                if(index == 24) {
+                	p.teleport(l.clone().add(0, 4, 0));
+                    p.setGameMode(GameMode.SURVIVAL);
+                }
             }, 0);
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             i++;
-            p.sendMessage(""+ChatColor.GREEN + i + " / 25 posts loaded");
+            p.sendMessage(""+ChatColor.GREEN + i + " / 27 posts loaded");
             if (i > 25) {
-                p.teleport(l.clone().add(0, 4, 0));
-                p.setGameMode(GameMode.SURVIVAL);
                 BukkitTask bt = task.get(0);
                 task.remove(0);
                 bt.cancel();
             }
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-        p.teleport(l.clone().add(0, 4, 0));
-        p.setGameMode(GameMode.SURVIVAL);
     }
 	
     public Location roundedLocation(Location loc) {
@@ -311,10 +311,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     public Map<UUID, RedditInventory> getBeforeTPInventory() {
         return beforeTPInventory;
-    }
-
-    public Map<Location, String> getSubmissionIDs() {
-        return submissionIDs;
     }
 
     public List<UUID> getRedditBrowsers() {
