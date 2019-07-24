@@ -289,16 +289,12 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Location l = new Location(w, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
         Stream<Submission> ll = reddit.subreddit(sub).posts().sorting(SubredditSort.HOT).build().stream();
         int i = 0;
-        while (i < 26) {
+        while (i < 27) {
             System.out.println(i);
             Submission s = ll.next();
             final int index = i;
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 setRoom(l.clone().add(0, -4 * index, 0), s.getId());
-                if (index == 1) {
-                    p.teleport(l.clone().add(0, 4, 0));
-                    p.setGameMode(GameMode.SURVIVAL);
-                }
             }, 0);
             try {
                 Thread.sleep(2000);
@@ -306,12 +302,17 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 e.printStackTrace();
             }
             i++;
+            p.sendMessage(""+ChatColor.GREEN + i + " / 25 posts loaded");
             if (i > 25) {
+                p.teleport(l.clone().add(0, 4, 0));
+                p.setGameMode(GameMode.SURVIVAL);
                 BukkitTask bt = task.get(0);
                 task.remove(0);
                 bt.cancel();
             }
         }
+        p.teleport(l.clone().add(0, 4, 0));
+        p.setGameMode(GameMode.SURVIVAL);
     }
 	
 	/*@EventHandler
