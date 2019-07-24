@@ -290,49 +290,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         p.setGameMode(GameMode.SURVIVAL);
     }
 	
-	/*@EventHandler
-	public void onInv(InventoryClickEvent event) {
-		Inventory top = event.getView().getTopInventory();
-		Inventory bottom = event.getView().getBottomInventory();
-		
-		if(top.getType() == InventoryType.CHEST && bottom.getType() == InventoryType.PLAYER && redditBrowsers.contains(((PlayerInventory)bottom).getHolder().getUniqueId())){
-				if(event.getCursor().getType().equals(Material.WRITTEN_BOOK)) {
-					BookMeta bm = (BookMeta) event.getCursor().getItemMeta();
-					PlayerInventory pi = (PlayerInventory) bottom;
-					if(bm.getAuthor() == pi.getHolder().getName()) {
-						String comment = "";
-						for(String s : bm.getPages()) {
-							comment += s+" ";
-						}
-						Comment c = reddit.submission(submissionIDs.get(top.getLocation())).reply(comment);
-						pi.getHolder().sendMessage(ChatColor.YELLOW + "Your comment has been posted! Here's a link: " + ChatColor.BLUE + ChatColor.UNDERLINE + c.getUrl());
-					}
-				}
-		}
-	}*/
-
-    //rip doesn't work
-	
-	/*@EventHandler
-	public void inventoryChange(Inventoryevent e) {
-		if(submissionIDs.containsKey(e.getDestination().getLocation())) {
-			if(e.getItem().getType().equals(Material.WRITTEN_BOOK)) {
-				BookMeta bm = (BookMeta) e.getItem().getItemMeta();
-				if(e.getSource() instanceof PlayerInventory) {
-					PlayerInventory pi = (PlayerInventory) e.getSource();
-					if(bm.getAuthor() == pi.getHolder().getName()) {
-						String comment = "";
-						for(String s : bm.getPages()) {
-							comment += s+" ";
-						}
-						Comment c = reddit.submission(submissionIDs.get(e.getDestination().getLocation())).reply(comment);
-						pi.getHolder().sendMessage(ChatColor.YELLOW + "Your comment has been posted! Here's a link: " + ChatColor.BLUE + c.getUrl());
-					}
-				}
-			}
-		}
-	}*/
-
     public Location roundedLocation(Location loc) {
         return new Location(loc.getWorld(), (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
