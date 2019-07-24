@@ -80,14 +80,9 @@ public class RedditBrowserPlugin extends JavaPlugin implements Listener {
     }
 
     public void attemptConnect() {
-        this.reloadConfig();
-        String username = "", password = "", clientId = "", clientSecret = "";
-        username = getConfig().getString("username");
-        password = getConfig().getString("password");
-        clientId = getConfig().getString("clientId");
-        clientSecret = getConfig().getString("clientSecret");
-        Credentials oauthCreds = Credentials.script(username, password, clientId, clientSecret);
-        UserAgent userAgent = new UserAgent("bot", "reddit.minecraft.browser", "1.0.0", username);
+        Client client = new Client(this);
+        Credentials oauthCreds = Credentials.script(client.getUsername(), client.getPassword(), client.getClientId(), client.getClientSecret());
+        UserAgent userAgent = new UserAgent("bot", "reddit.minecraft.browser", "1.0.0", client.getUsername());
         reddit = OAuthHelper.automatic(new OkHttpNetworkAdapter(userAgent), oauthCreds);
     }
 
