@@ -1,9 +1,9 @@
 package me.delta2force.redditbrowser;
 
 import me.delta2force.redditbrowser.generator.RedditGenerator;
+import me.delta2force.redditbrowser.interaction.InteractiveLocation;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
-import me.delta2force.redditbrowser.math.InteractiveLocation;
 import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
