@@ -149,6 +149,7 @@ public class EventListener implements Listener {
                 }
                 in++;
             }
+            p.openInventory(commentInventory);
     	}
     }
     
