@@ -143,7 +143,7 @@ public class EventListener implements Listener {
                     } else {
                         bookmeta.addPage(c.getBody());
                     }
-                    bookmeta.setLore(Arrays.asList(c.getId()));
+                    bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
                     book.setItemMeta(bookmeta);
                     reddit.commentCache.put(c.getId(), cn);
                     commentInventory.addItem(book);

@@ -302,7 +302,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 } else {
                     bookmeta.addPage(c.getBody());
                 }
-                bookmeta.setLore(Arrays.asList(c.getId()));
+                bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
                 book.setItemMeta(bookmeta);
                 commentCache.put(c.getId(), cn);
                 chest.getInventory().addItem(book);
