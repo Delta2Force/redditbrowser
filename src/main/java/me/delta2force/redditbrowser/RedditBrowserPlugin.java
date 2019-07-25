@@ -282,8 +282,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
         l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
         
-        inventoryLocations.put(chest.getInventory(), chest.getLocation());
-        
         int in = 0;
         for (CommentNode<Comment> cn : rcn.getReplies()) {
             Comment c = cn.getSubject();
@@ -291,7 +289,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
                 BookMeta bookmeta = (BookMeta) book.getItemMeta();
                 bookmeta.setTitle("Comment");
-                bookmeta.setAuthor(c.getAuthor());
+                bookmeta.setAuthor("u/"+c.getAuthor());
                 if (c.getBody().length() > 255) {
                     double f = Math.ceil(((float) c.getBody().length()) / 255f);
                     for (int i = 0; i < f; i++) {
@@ -313,6 +311,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
             }
             in++;
         }
+        
+        inventoryLocations.put(chest.getInventory(), b.getLocation());
     }
 
     public void cube(Material blockMaterial, Location from, Location to) {
