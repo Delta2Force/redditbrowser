@@ -18,6 +18,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -127,7 +128,7 @@ public class EventListener implements Listener {
                     ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
                     BookMeta bookmeta = (BookMeta) book.getItemMeta();
                     bookmeta.setTitle("Comment");
-                    bookmeta.setAuthor(c.getAuthor());
+                    bookmeta.setAuthor("u/" + c.getAuthor());
                     if (c.getBody().length() > 255) {
                         double f = Math.ceil(((float) c.getBody().length()) / 255f);
                         for (int i = 0; i < f; i++) {
@@ -159,7 +160,7 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma((Player) event.getPlayer());
-    	Location blockLocation = event.getInventory().getLocation();
+    	Location blockLocation = ((Block)event.getInventory().getHolder()).getLocation();
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
