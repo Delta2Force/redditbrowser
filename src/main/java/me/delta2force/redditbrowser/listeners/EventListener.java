@@ -21,7 +21,6 @@ public class EventListener implements Listener {
     @EventHandler
     public void onSignChange(SignChangeEvent event) {
         Player player = event.getPlayer();
-        System.out.println("hello");
         // Check if the list contains the players UUID
         if (!reddit.getRedditBrowsers().contains(player.getUniqueId())) {
             return;
@@ -29,21 +28,15 @@ public class EventListener implements Listener {
 
         // Set the line to a variable
         String line = event.getLine(0);
-        System.out.println("alright " + line);
         // Make sure the line exist
         if (line != null) {
-        	System.out.println("mhm");
             // Check if the sign's first line is what we want
             if (!line.startsWith("r/")) {
                 return;
             }
-            
-            System.out.println("alright");
 
             // Get the sub they want
             String sub = line.replaceFirst("r/", "");
-            
-            System.out.println("lets go");
             
             // Set the player to spectator mode
             player.setGameMode(GameMode.SPECTATOR);
