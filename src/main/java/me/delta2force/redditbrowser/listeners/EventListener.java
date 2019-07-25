@@ -114,7 +114,13 @@ public class EventListener implements Listener {
     	if (!reddit.getRedditBrowsers().contains(p.getUniqueId())) {
             return;
         }
-    	if(event.getCurrentItem().getType().equals(Material.WRITTEN_BOOK) && event.getInventory().getType().equals(InventoryType.CHEST) && getInteractionAt(event.getClickedInventory().getLocation()) != null && event.isRightClick()) {
+    	if(event.getCurrentItem().getType().equals(Material.WRITTEN_BOOK) && event.getInventory().getType().equals(InventoryType.CHEST) && event.isRightClick()) {
+    		if(!event.getView().getTitle().startsWith("Comment ")) {
+    			if(getInteractionAt(event.getClickedInventory().getLocation()) == null) {
+    				return;
+    			}
+    			return;
+    		}
     		String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
     		List<CommentNode<Comment>> replies = reddit.commentCache.get(commentID).getReplies();
     		Inventory commentInventory = reddit.getServer().createInventory(event.getClickedInventory().getHolder(), InventoryType.CHEST, "Comment " + commentID);
