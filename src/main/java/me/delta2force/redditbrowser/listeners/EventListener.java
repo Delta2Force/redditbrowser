@@ -13,6 +13,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -155,7 +156,12 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma((Player) event.getPlayer());
-    	Location blockLocation = reddit.inventoryLocations.get(event.getView().getTitle());
+    	 Location blockLocation = null;
+    	 if(event.getInventory().getLocation() != null) {
+    		 blockLocation = reddit.inventoryLocations.get(((Chest)event.getInventory().getLocation().getBlock().getState()).getCustomName());
+    	 }else {
+    	    blockLocation = reddit.inventoryLocations.get(event.getView().getTitle());
+    	 }
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
