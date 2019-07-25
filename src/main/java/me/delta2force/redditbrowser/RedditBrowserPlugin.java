@@ -55,7 +55,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
     private List<UUID> redditBrowsers = new ArrayList<>();
-    public Map<InteractiveLocation, String> interactiveSubmissionID = new HashMap<>();
+    public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -169,7 +169,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
         
-        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), InteractiveEnum.COMMENT_CHEST), s.getId());
+        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), s.getId()), InteractiveEnum.COMMENT_CHEST);
         
         Chest chest = (Chest) b.getState();
 
@@ -203,17 +203,17 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Directional uvdir = (Directional) uv.getBlockData();
         uvdir.setFacing(BlockFace.SOUTH);
         uv.setBlockData(uvdir);
-        interactiveSubmissionID.put(new InteractiveLocation(uv.getLocation(), InteractiveEnum.UPVOTE), s.getId());
+        interactiveSubmissionID.put(new InteractiveLocation(uv.getLocation(), s.getId()), InteractiveEnum.UPVOTE);
         
         Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -2, -3));
         dv.setType(Material.OAK_BUTTON);
         Directional dvdir = (Directional) dv.getBlockData();
         dvdir.setFacing(BlockFace.SOUTH);
         dv.setBlockData(dvdir);
-        interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), InteractiveEnum.DOWNVOTE), s.getId());
+        interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), s.getId()), InteractiveEnum.DOWNVOTE);
         
-        spawnHologram(uv.getLocation().clone().add(.5, -1, .5), colorCode("a")+"Upvote");
-        spawnHologram(dv.getLocation().clone().add(.5, -1, .5), colorCode("c")+"Downvote");
+        //spawnHologram(uv.getLocation().clone().add(.5, -1, .5), colorCode("a")+"Upvote");
+        //spawnHologram(dv.getLocation().clone().add(.5, -1, .5), colorCode("c")+"Downvote");
         
         if (s.isSelfPost()) {
             ItemStack book = new ItemStack(Material.WRITTEN_BOOK);

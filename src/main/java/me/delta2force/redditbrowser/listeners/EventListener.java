@@ -60,42 +60,57 @@ public class EventListener implements Listener {
 
     }
     
+    public InteractiveLocation getInteractionAt(Location loc) {
+    	int x = loc.getBlockX();
+    	int y = loc.getBlockY();
+    	int z = loc.getBlockZ();
+    	for(InteractiveLocation inloc : reddit.interactiveSubmissionID.keySet()) {
+    		if(inloc.getX() == x && inloc.getY() == y && inloc.getZ() == z) {
+    			return inloc;
+    		}
+    	}
+    	return null;
+    }
+    
     @EventHandler
     public void interact(PlayerInteractEvent event) {
-    	if(reddit.interactiveSubmissionID.containsKey(new InteractiveLocation(event.getClickedBlock().getLocation(), InteractiveEnum.UPVOTE))) {
-    		String submissionID = reddit.interactiveSubmissionID.get(new InteractiveLocation(event.getClickedBlock().getLocation(), InteractiveEnum.UPVOTE));
-    		reddit.reddit.submission(submissionID).upvote();
-    		event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post!");
-    	}
-    	if(reddit.interactiveSubmissionID.containsKey(new InteractiveLocation(event.getClickedBlock().getLocation(), InteractiveEnum.DOWNVOTE))) {
-    		String submissionID = reddit.interactiveSubmissionID.get(new InteractiveLocation(event.getClickedBlock().getLocation(), InteractiveEnum.DOWNVOTE));
-    		reddit.reddit.submission(submissionID).downvote();
-    		event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
+    	if(getInteractionAt(event.getClickedBlock().getLocation()) != null) {
+    		InteractiveLocation inLoc = getInteractionAt(event.getClickedBlock().getLocation());
+    		if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.UPVOTE) {
+        		String submissionID = inLoc.getSubmissionId();
+        		reddit.reddit.submission(submissionID).upvote();
+        		event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post!");
+    		}else if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.DOWNVOTE) {
+    			String submissionID = inLoc.getSubmissionId();
+        		reddit.reddit.submission(submissionID).downvote();
+        		event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
+        	}
     	}
     }
     
     @EventHandler
     public void closeInventory(InventoryCloseEvent event) {
     	Location blockLocation = event.getInventory().getLocation();
-    	if(reddit.interactiveSubmissionID.containsKey(new InteractiveLocation(blockLocation, InteractiveEnum.COMMENT_CHEST))) {
-    		String submissionID = reddit.interactiveSubmissionID.get(new InteractiveLocation(blockLocation, InteractiveEnum.COMMENT_CHEST));
-    		for(ItemStack is : event.getInventory().getContents()) {
-    			if(is != null) {
-    				if(is.getType() == Material.WRITTEN_BOOK) {
-    					BookMeta bm = (BookMeta) is.getItemMeta();
-    					if(bm.getAuthor().equals(event.getPlayer().getName())) {
-    						String comment = "";
-    						for(String page : bm.getPages()) {
-    							comment+=page + " ";
-    						}
-    						Comment redditComment = reddit.reddit.submission(submissionID).reply(comment);
-    						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment! " + ChatColor.BLUE + ChatColor.UNDERLINE + redditComment.getUrl());
-    					}
-    				}
-    			}
+    	if(getInteractionAt(blockLocation) != null) {
+    		InteractiveLocation inloc = getInteractionAt(blockLocation);
+    		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
+        		String submissionID = inloc.getSubmissionId();
+        		for(ItemStack is : event.getInventory().getContents()) {
+        			if(is != null) {
+        				if(is.getType() == Material.WRITTEN_BOOK) {
+        					BookMeta bm = (BookMeta) is.getItemMeta();
+        					if(bm.getAuthor().equals(event.getPlayer().getName())) {
+        						String comment = "";
+        						for(String page : bm.getPages()) {
+        							comment+=page + " ";
+        						}
+        						Comment redditComment = reddit.reddit.submission(submissionID).reply(comment);
+        						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment! " + ChatColor.BLUE + ChatColor.UNDERLINE + redditComment.getUrl());
+        					}
+        				}
+        			}
+        		}
     		}
-    		reddit.reddit.submission(submissionID).downvote();
-    		event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
     	}
     }
 
