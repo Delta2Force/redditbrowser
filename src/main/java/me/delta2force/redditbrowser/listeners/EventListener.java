@@ -4,11 +4,6 @@ import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
 import me.delta2force.redditbrowser.interaction.InteractiveLocation;
 import net.dean.jraw.models.Comment;
-import net.dean.jraw.models.Identifiable;
-import net.dean.jraw.models.Listing;
-import net.dean.jraw.models.NestedIdentifiable;
-import net.dean.jraw.models.VoteDirection;
-import net.dean.jraw.references.CommentReference;
 import net.dean.jraw.tree.CommentNode;
 
 import java.util.Arrays;
@@ -18,7 +13,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -121,6 +115,7 @@ public class EventListener implements Listener {
     		String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
     		List<CommentNode<Comment>> replies = reddit.commentCache.get(commentID).getReplies();
     		Inventory commentInventory = reddit.getServer().createInventory(event.getClickedInventory().getHolder(), InventoryType.CHEST, "Comment " + commentID);
+    		reddit.inventoryLocations.put(commentInventory, reddit.inventoryLocations.get(event.getClickedInventory()));
     		int in = 0;
             for (CommentNode<Comment> cn : replies) {
                 Comment c = cn.getSubject();
@@ -160,7 +155,7 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma((Player) event.getPlayer());
-    	Location blockLocation = ((Block)event.getInventory().getHolder()).getLocation();
+    	Location blockLocation = reddit.inventoryLocations.get(event.getInventory());
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
@@ -194,7 +189,7 @@ public class EventListener implements Listener {
             						for(String page : bm.getPages()) {
             							comment+=page + " ";
             						}
-            						Comment redditComment = reddit.reddit.submission(submissionID).reply(comment);
+            						reddit.reddit.submission(submissionID).reply(comment);
             						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment!");
             						event.getPlayer().getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
             						event.getInventory().remove(is);

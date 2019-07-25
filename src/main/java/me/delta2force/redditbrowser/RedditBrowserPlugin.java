@@ -45,10 +45,8 @@ import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import com.google.common.cache.Cache;
 import com.google.gson.Gson;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -72,6 +70,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
+    public Map<Inventory, Location> inventoryLocations = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -203,8 +202,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
             block.getState().update();
         }
 
-        Location go = l.clone().add(-2, -3, -3);
-
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
         
@@ -284,7 +281,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
 
         l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
-
+        
+        inventoryLocations.put(chest.getInventory(), chest.getLocation());
+        
         int in = 0;
         for (CommentNode<Comment> cn : rcn.getReplies()) {
             Comment c = cn.getSubject();
