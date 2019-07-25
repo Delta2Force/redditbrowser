@@ -10,6 +10,7 @@ import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
 import net.dean.jraw.http.UserAgent;
 import net.dean.jraw.models.Comment;
+import net.dean.jraw.models.KarmaBySubreddit;
 import net.dean.jraw.models.Submission;
 import net.dean.jraw.models.SubredditSort;
 import net.dean.jraw.oauth.Credentials;
@@ -54,6 +55,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
+    private Map<UUID, Integer> beforeTPExperience = new HashMap<>();
     private List<UUID> redditBrowsers = new ArrayList<>();
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     
@@ -104,6 +106,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
                     beforeTPLocation.put(p.getUniqueId(), p.getLocation());
                     beforeTPInventory.put(p.getUniqueId(), new RedditInventory(p.getInventory()));
                     redditBrowsers.add(p.getUniqueId());
+                    beforeTPExperience.put(p.getUniqueId(), p.getTotalExperience());
                     p.getInventory().clear();
                     setupReddit(p);
                 }
@@ -249,7 +252,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         int in = 0;
         for (CommentNode<Comment> cn : rcn.getReplies()) {
             Comment c = cn.getSubject();
-            if (in < 25) {
+            if (in < 26) {
                 ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
                 BookMeta bookmeta = (BookMeta) book.getItemMeta();
                 bookmeta.setTitle("Comment");
@@ -284,7 +287,17 @@ public class RedditBrowserPlugin extends JavaPlugin {
             }
         }
     }
-
+    
+    public void setKarma(Player p) {
+    	p.setTotalExperience(0);
+    	int karma = 0;
+    	for(KarmaBySubreddit kbs : reddit.me().karma()) {
+    		karma += kbs.getLinkKarma();
+    		karma += kbs.getCommentKarma();
+    	}
+    	p.setLevel(karma);
+    }
+    
     public void createTowerAndTP(Player p, String sub, World w) {
         Random r = new Random();
         Location l = new Location(w, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
@@ -302,6 +315,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
                     p.setGameMode(GameMode.SURVIVAL);
                     p.getInventory().clear();
                 	p.getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
+                	setKarma(p);
                 }
             }, 0);
             i++;
@@ -327,11 +341,13 @@ public class RedditBrowserPlugin extends JavaPlugin {
         p.sendMessage(ChatColor.GREEN + "Goodbye reddit!");
         p.teleport(beforeTPLocation.get(p.getUniqueId()));
         p.getInventory().clear();
+        p.setTotalExperience(beforeTPExperience.get(p.getUniqueId()));
         RedditInventory beforeTP = beforeTPInventory.get(p.getUniqueId());
         beforeTP.apply(p);
         redditBrowsers.remove(p.getUniqueId());
         beforeTPLocation.remove(p.getUniqueId());
         beforeTPInventory.remove(p.getUniqueId());
+        beforeTPExperience.remove(p.getUniqueId());
     }
 
     public Map<UUID, Location> getBeforeTPLocation() {
