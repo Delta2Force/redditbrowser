@@ -220,8 +220,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
         dv.setBlockData(dvdir);
         interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), s.getId()), InteractiveEnum.DOWNVOTE);
         
-        spawnHologram(uv.getLocation().clone().add(.5, -3, .5), colorCode("a")+"+1");
-        spawnHologram(dv.getLocation().clone().add(.5, -3, .5), colorCode("c")+"-1");
+        spawnHologram(uv.getLocation().clone().add(.5, -2, .5), colorCode("a")+"+1");
+        spawnHologram(dv.getLocation().clone().add(.5, -2, .5), colorCode("c")+"-1");
         
         if (s.isSelfPost()) {
             ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
