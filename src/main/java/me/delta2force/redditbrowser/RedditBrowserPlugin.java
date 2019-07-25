@@ -140,6 +140,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
         as.setCustomNameVisible(true);
         as.setGravity(false);
         as.setVisible(false);
+        as.setInvulnerable(true);
+        as.setCollidable(false);
     }
     
     public String colorCode(String color) {
@@ -166,6 +168,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
+        
+        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), InteractiveEnum.COMMENT_CHEST), s.getId());
+        
         Chest chest = (Chest) b.getState();
 
         Location bl = b.getLocation();
