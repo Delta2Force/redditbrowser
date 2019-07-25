@@ -37,6 +37,7 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.MapMeta;
@@ -44,6 +45,7 @@ import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import com.google.common.cache.Cache;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
@@ -53,6 +55,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,6 +71,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private List<UUID> redditBrowsers = new ArrayList<>();
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
+    public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -301,7 +305,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 } else {
                     bookmeta.addPage(c.getBody());
                 }
+                bookmeta.setLore(Arrays.asList(c.getId()));
                 book.setItemMeta(bookmeta);
+                commentCache.put(c.getId(), cn);
                 chest.getInventory().addItem(book);
             } else {
                 break;
