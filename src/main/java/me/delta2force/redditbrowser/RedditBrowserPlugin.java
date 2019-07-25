@@ -21,6 +21,7 @@ import net.dean.jraw.tree.RootCommentNode;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
+import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -58,6 +59,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private Map<UUID, Integer> beforeTPExperience = new HashMap<>();
     private List<UUID> redditBrowsers = new ArrayList<>();
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
+    public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -121,6 +123,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
         wc.generator(new RedditGenerator());
         wc.generateStructures(false);
         World w = Bukkit.createWorld(wc);
+        w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        w.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        w.setTime(1400);
         Random r = new Random();
         Location l = new Location(w, r.nextInt(2000000) - 1000000, 30, r.nextInt(2000000) - 1000000);
         int fx = l.getBlockX() - 11;
@@ -215,8 +220,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
         dv.setBlockData(dvdir);
         interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), s.getId()), InteractiveEnum.DOWNVOTE);
         
-        //spawnHologram(uv.getLocation().clone().add(.5, -1, .5), colorCode("a")+"Upvote");
-        //spawnHologram(dv.getLocation().clone().add(.5, -1, .5), colorCode("c")+"Downvote");
+        spawnHologram(uv.getLocation().clone().add(.5, -3, .5), colorCode("a")+"+1");
+        spawnHologram(dv.getLocation().clone().add(.5, -3, .5), colorCode("c")+"-1");
         
         if (s.isSelfPost()) {
             ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
@@ -241,7 +246,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
             ItemStack map = new ItemStack(Material.FILLED_MAP);
             MapMeta mapMeta = (MapMeta) map.getItemMeta();
             MapView mv = Bukkit.createMap(l.getWorld());
-            mv.addRenderer(new RedditRenderer(s.getUrl()));
+            mv.addRenderer(new RedditRenderer(s.getUrl(), this));
             mapMeta.setMapView(mv);
             map.setItemMeta(mapMeta);
             itf.setItem(map);
@@ -321,6 +326,11 @@ public class RedditBrowserPlugin extends JavaPlugin {
             i++;
             p.sendMessage(""+ChatColor.GREEN + i + " / 27 posts loaded");
             if (i > 25) {
+            	for(Runnable t : runnableQueue) {
+                	Bukkit.getScheduler().runTaskAsynchronously(this, t);
+                	System.out.println(t);
+            	}
+            	runnableQueue.clear();
                 BukkitTask bt = task.get(0);
                 task.remove(0);
                 bt.cancel();

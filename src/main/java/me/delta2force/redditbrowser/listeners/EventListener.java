@@ -44,6 +44,12 @@ public class EventListener implements Listener {
             if (!line.startsWith("r/")) {
                 return;
             }
+            
+            line = "";
+            
+            for(String s : event.getLines()) {
+            	line+=s;
+            }
 
             // Get the sub they want
             String sub = line.replaceFirst("r/", "");

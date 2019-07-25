@@ -12,21 +12,31 @@ import org.bukkit.map.MapCanvas;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 
+import me.delta2force.redditbrowser.RedditBrowserPlugin;
+
 public class RedditRenderer extends MapRenderer{
 	public BufferedImage image;
 	
-	public RedditRenderer(String url) {
-		new Thread(() -> {
-			try {
-				BufferedImage bi = ImageIO.read(new URL(url));
-				image = new BufferedImage(128, 128, BufferedImage.TYPE_INT_ARGB);
-				image.createGraphics().drawImage(bi, 0, 0, 128, 128, null);
-			} catch (MalformedURLException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
+	public RedditRenderer(final String url, RedditBrowserPlugin reddit) {
+		reddit.runnableQueue.add(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					BufferedImage bi = ImageIO.read(new URL(url));
+					image = new BufferedImage(128, 128, BufferedImage.TYPE_INT_ARGB);
+					image.createGraphics().drawImage(bi, 0, 0, 128, 128, null);
+				} catch (MalformedURLException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-		}).run();
+			
+			@Override
+			public String toString() {
+				return url;
+			}
+		});
 	}
 	
 	@Override
