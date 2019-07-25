@@ -27,6 +27,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 
+import com.google.gson.Gson;
+
 public class EventListener implements Listener {
 
     private RedditBrowserPlugin reddit;
@@ -162,6 +164,7 @@ public class EventListener implements Listener {
     	 }else {
     	    blockLocation = reddit.inventoryLocations.get(event.getView().getTitle());
     	 }
+    	 System.out.println(new Gson().toJson(reddit.inventoryLocations) + " " + blockLocation);
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
