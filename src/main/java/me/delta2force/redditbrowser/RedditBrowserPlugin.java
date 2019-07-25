@@ -1,6 +1,7 @@
 package me.delta2force.redditbrowser;
 
 import me.delta2force.redditbrowser.generator.RedditGenerator;
+import me.delta2force.redditbrowser.interaction.InteractiveEnum;
 import me.delta2force.redditbrowser.interaction.InteractiveLocation;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
@@ -26,6 +27,7 @@ import org.bukkit.WorldCreator;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Ladder;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -53,6 +55,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
     private List<UUID> redditBrowsers = new ArrayList<>();
+    public Map<InteractiveLocation, String> interactiveSubmissionID = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -139,6 +142,10 @@ public class RedditBrowserPlugin extends JavaPlugin {
         as.setVisible(false);
     }
     
+    public String colorCode(String color) {
+    	return (char) (0xfeff00a7) + color;
+    }
+    
     public void setRoom(Location l, String submissionId) {
         Submission s = reddit.submission(submissionId).inspect();
         RootCommentNode rcn = reddit.submission(submissionId).comments();
@@ -179,13 +186,30 @@ public class RedditBrowserPlugin extends JavaPlugin {
             spawnHologram(bl.clone().add(.5, .5, .5), title);
         }
 
-        spawnHologram(bl.clone().add(.5, -.25, .5), "" + (char) (0xfeff00a7) + "6" + s.getScore());
+        spawnHologram(bl.clone().add(.5, -.25, .5), colorCode("6") + s.getScore());
 
         l.getWorld().getBlockAt(l.clone().add(-2, -2, -2)).setType(Material.POLISHED_ANDESITE);
 
         ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(-2, -2, -3), EntityType.ITEM_FRAME);
         itf.setFacingDirection(BlockFace.SOUTH);
-
+        
+        Block uv = l.getWorld().getBlockAt(l.clone().add(-3, -2, -3));
+        uv.setType(Material.OAK_BUTTON);
+        Directional uvdir = (Directional) uv.getBlockData();
+        uvdir.setFacing(BlockFace.SOUTH);
+        uv.setBlockData(uvdir);
+        interactiveSubmissionID.put(new InteractiveLocation(uv.getLocation(), InteractiveEnum.UPVOTE), s.getId());
+        
+        Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -2, -3));
+        dv.setType(Material.OAK_BUTTON);
+        Directional dvdir = (Directional) dv.getBlockData();
+        dvdir.setFacing(BlockFace.SOUTH);
+        dv.setBlockData(dvdir);
+        interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), InteractiveEnum.DOWNVOTE), s.getId());
+        
+        spawnHologram(uv.getLocation().clone().add(.5, -1, .5), colorCode("a")+"Upvote");
+        spawnHologram(dv.getLocation().clone().add(.5, -1, .5), colorCode("c")+"Downvote");
+        
         if (s.isSelfPost()) {
             ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
             BookMeta bookmeta = (BookMeta) book.getItemMeta();
