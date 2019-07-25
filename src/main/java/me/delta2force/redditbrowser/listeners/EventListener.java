@@ -74,6 +74,10 @@ public class EventListener implements Listener {
     
     @EventHandler
     public void interact(PlayerInteractEvent event) {
+    	 if (!reddit.getRedditBrowsers().contains(event.getPlayer().getUniqueId())) {
+             return;
+         }
+    	 reddit.setKarma(event.getPlayer());
     	if(getInteractionAt(event.getClickedBlock().getLocation()) != null) {
     		InteractiveLocation inLoc = getInteractionAt(event.getClickedBlock().getLocation());
     		if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.UPVOTE) {
@@ -90,6 +94,10 @@ public class EventListener implements Listener {
     
     @EventHandler
     public void closeInventory(InventoryCloseEvent event) {
+    	 if (!reddit.getRedditBrowsers().contains(event.getPlayer().getUniqueId())) {
+             return;
+         }
+    	 reddit.setKarma((Player) event.getPlayer());
     	Location blockLocation = event.getInventory().getLocation();
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
@@ -118,6 +126,9 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onLeave(PlayerQuitEvent event) {
+    	if (!reddit.getRedditBrowsers().contains(event.getPlayer().getUniqueId())) {
+            return;
+        }
         Player player = event.getPlayer();
         reddit.kickOut(player);
     }
