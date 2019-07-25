@@ -172,7 +172,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
 
         Location go = l.clone().add(-2, -3, -3);
-        System.out.println(go.getBlockX() + " " + go.getBlockY() + " " + go.getBlockZ());
 
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
@@ -309,7 +308,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Stream<Submission> ll = reddit.subreddit(sub).posts().sorting(SubredditSort.HOT).build().stream();
         int i = 0;
         while (i < 27) {
-            System.out.println(i);
             Submission s = ll.next();
             final int index = i;
             Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -328,7 +326,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
             if (i > 25) {
             	for(Runnable t : runnableQueue) {
                 	Bukkit.getScheduler().runTaskAsynchronously(this, t);
-                	System.out.println(t);
             	}
             	runnableQueue.clear();
                 BukkitTask bt = task.get(0);
