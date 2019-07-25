@@ -115,7 +115,7 @@ public class EventListener implements Listener {
     		String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
     		List<CommentNode<Comment>> replies = reddit.commentCache.get(commentID).getReplies();
     		Inventory commentInventory = reddit.getServer().createInventory(event.getClickedInventory().getHolder(), InventoryType.CHEST, "Comment " + commentID);
-    		reddit.inventoryLocations.put(commentInventory, reddit.inventoryLocations.get(event.getClickedInventory()));
+    		reddit.inventoryLocations.put("Comment " + commentID, reddit.inventoryLocations.get(event.getView().getTitle()));
     		int in = 0;
             for (CommentNode<Comment> cn : replies) {
                 Comment c = cn.getSubject();
@@ -155,7 +155,7 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma((Player) event.getPlayer());
-    	Location blockLocation = reddit.inventoryLocations.get(event.getInventory());
+    	Location blockLocation = reddit.inventoryLocations.get(event.getView().getTitle());
     	if(getInteractionAt(blockLocation) != null) {
     		InteractiveLocation inloc = getInteractionAt(blockLocation);
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {

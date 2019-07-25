@@ -70,7 +70,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
-    public Map<Inventory, Location> inventoryLocations = new HashMap<>();
+    public Map<String, Location> inventoryLocations = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -282,6 +282,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
         l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
         
+        chest.setCustomName(UUID.randomUUID().toString());
+        
         int in = 0;
         for (CommentNode<Comment> cn : rcn.getReplies()) {
             Comment c = cn.getSubject();
@@ -312,7 +314,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
             in++;
         }
         
-        inventoryLocations.put(chest.getInventory(), b.getLocation());
+        inventoryLocations.put(chest.getCustomName(), b.getLocation());
     }
 
     public void cube(Material blockMaterial, Location from, Location to) {
