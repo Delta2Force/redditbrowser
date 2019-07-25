@@ -44,6 +44,14 @@ import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import com.google.gson.Gson;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -71,6 +79,26 @@ public class RedditBrowserPlugin extends JavaPlugin {
         saveDefaultConfig();
         listener = new EventListener(this);
         Bukkit.getServer().getPluginManager().registerEvents(listener, this);
+        try {
+			checkLatestVersion();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+    }
+    
+    public void checkLatestVersion() throws MalformedURLException, IOException {
+    	Gson g = new Gson();
+    	InputStream stream = new URL("https://api.github.com/repos/Delta2Force/redditbrowser/releases/latest").openStream();
+    	InputStreamReader reader = new InputStreamReader(stream);
+    	GithubAPIResponse gar = g.fromJson(reader, GithubAPIResponse.class);
+    	reader.close();
+    	stream.close();
+    	
+    	if(gar.tag_name != this.getDescription().getVersion()) {
+    		this.getServer().getLogger().info("Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
+    	}
     }
 
     @Override
