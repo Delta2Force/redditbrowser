@@ -1,4 +1,5 @@
 # RedditBrowser - Browse Reddit in Minecraft [![Build Status](https://travis-ci.org/Delta2Force/redditbrowser.svg?branch=master)](https://travis-ci.org/Delta2Force/redditbrowser)
+(For some reason, the branch I made for more interaction is still registered in travis and will always fail since it doesn't exist anymore.)
 
 ## Installation
 Download the latest version from the releases tab and put it in your plugins tab.
