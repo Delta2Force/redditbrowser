@@ -300,6 +300,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 if(index == 24) {
                 	p.teleport(l.clone().add(0, 4, 0));
                     p.setGameMode(GameMode.SURVIVAL);
+                    p.getInventory().clear();
+                	p.getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
                 }
             }, 0);
             i++;

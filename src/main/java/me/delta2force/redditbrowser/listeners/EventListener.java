@@ -105,7 +105,9 @@ public class EventListener implements Listener {
         							comment+=page + " ";
         						}
         						Comment redditComment = reddit.reddit.submission(submissionID).reply(comment);
-        						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment! " + ChatColor.BLUE + ChatColor.UNDERLINE + redditComment.getUrl());
+        						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment!");
+        						event.getPlayer().getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
+        						event.getInventory().remove(is);
         					}
         				}
         			}
