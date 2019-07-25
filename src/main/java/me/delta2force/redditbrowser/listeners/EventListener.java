@@ -118,7 +118,6 @@ public class EventListener implements Listener {
     		String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
     		List<CommentNode<Comment>> replies = reddit.commentCache.get(commentID).getReplies();
     		Inventory commentInventory = reddit.getServer().createInventory(event.getClickedInventory().getHolder(), InventoryType.CHEST, "Comment " + commentID);
-    		reddit.inventoryLocations.put("Comment " + commentID, reddit.inventoryLocations.get(event.getView().getTitle()));
     		int in = 0;
             for (CommentNode<Comment> cn : replies) {
                 Comment c = cn.getSubject();
@@ -158,36 +157,28 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma((Player) event.getPlayer());
-    	 Location blockLocation = null;
-    	 if(event.getInventory().getLocation() != null) {
-    		 blockLocation = reddit.inventoryLocations.get(((Chest)event.getInventory().getLocation().getBlock().getState()).getCustomName());
-    	 }else {
-    	    blockLocation = reddit.inventoryLocations.get(event.getView().getTitle());
-    	 }
-    	 System.out.println(new Gson().toJson(reddit.inventoryLocations) + " " + blockLocation);
-    	if(getInteractionAt(blockLocation) != null) {
-    		InteractiveLocation inloc = getInteractionAt(blockLocation);
+    	 if(event.getView().getTitle().startsWith("Comment ")) {
+     		String commentID = event.getView().getTitle().split(" ")[1];
+     		for(ItemStack is : event.getInventory().getContents()) {
+     			if(is != null) {
+     				if(is.getType() == Material.WRITTEN_BOOK) {
+     					BookMeta bm = (BookMeta) is.getItemMeta();
+     					if(bm.getAuthor().equals(event.getPlayer().getName())) {
+     						String comment = "";
+     						for(String page : bm.getPages()) {
+     							comment+=page + " ";
+     						}
+     						reddit.commentCache.get(commentID).getSubject().toReference(reddit.reddit).reply(comment);
+     						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment on a comment!");
+     						event.getPlayer().getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
+     						event.getInventory().remove(is);
+     					}
+     				}
+     			}
+     		}
+ 		}else if(getInteractionAt(event.getInventory().getLocation()) != null) {
+    		InteractiveLocation inloc = getInteractionAt(event.getInventory().getLocation());
     		if(reddit.interactiveSubmissionID.get(inloc) == InteractiveEnum.COMMENT_CHEST) {
-    			if(event.getView().getTitle().startsWith("Comment ")) {
-            		String commentID = event.getView().getTitle().split(" ")[1];
-            		for(ItemStack is : event.getInventory().getContents()) {
-            			if(is != null) {
-            				if(is.getType() == Material.WRITTEN_BOOK) {
-            					BookMeta bm = (BookMeta) is.getItemMeta();
-            					if(bm.getAuthor().equals(event.getPlayer().getName())) {
-            						String comment = "";
-            						for(String page : bm.getPages()) {
-            							comment+=page + " ";
-            						}
-            						reddit.commentCache.get(commentID).getSubject().toReference(reddit.reddit).reply(comment);
-            						event.getPlayer().sendMessage(ChatColor.GREEN + "You have left a comment on a comment!");
-            						event.getPlayer().getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
-            						event.getInventory().remove(is);
-            					}
-            				}
-            			}
-            		}
-    			}else {
             		String submissionID = inloc.getSubmissionId();
             		for(ItemStack is : event.getInventory().getContents()) {
             			if(is != null) {
@@ -206,7 +197,6 @@ public class EventListener implements Listener {
             				}
             			}
             		}
-    			}
     		}
     	}
     }

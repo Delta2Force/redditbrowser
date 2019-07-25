@@ -37,7 +37,6 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.MapMeta;
@@ -70,7 +69,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
-    public Map<String, Location> inventoryLocations = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -313,8 +311,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
             }
             in++;
         }
-        
-        inventoryLocations.put(chest.getCustomName(), b.getLocation());
     }
 
     public void cube(Material blockMaterial, Location from, Location to) {
