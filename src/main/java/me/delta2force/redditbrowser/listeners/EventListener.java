@@ -119,7 +119,6 @@ public class EventListener implements Listener {
     			if(getInteractionAt(event.getClickedInventory().getLocation()) == null) {
     				return;
     			}
-    			return;
     		}
     		String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
     		List<CommentNode<Comment>> replies = reddit.commentCache.get(commentID).getReplies();
