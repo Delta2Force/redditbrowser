@@ -46,13 +46,13 @@ import org.bukkit.scheduler.BukkitTask;
 
 import com.google.gson.Gson;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,6 +68,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private List<UUID> redditBrowsers = new ArrayList<>();
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
+    public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
     
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
@@ -199,8 +200,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
             block.getState().update();
         }
 
-        Location go = l.clone().add(-2, -3, -3);
-
         Block b = l.clone().add(-2, -3, -3).getBlock();
         b.setType(Material.CHEST);
         
@@ -280,7 +279,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
 
         l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
-
+        
+        chest.setCustomName(UUID.randomUUID().toString());
+        
         int in = 0;
         for (CommentNode<Comment> cn : rcn.getReplies()) {
             Comment c = cn.getSubject();
@@ -288,7 +289,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
                 BookMeta bookmeta = (BookMeta) book.getItemMeta();
                 bookmeta.setTitle("Comment");
-                bookmeta.setAuthor(c.getAuthor());
+                bookmeta.setAuthor("u/"+c.getAuthor());
                 if (c.getBody().length() > 255) {
                     double f = Math.ceil(((float) c.getBody().length()) / 255f);
                     for (int i = 0; i < f; i++) {
@@ -301,7 +302,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 } else {
                     bookmeta.addPage(c.getBody());
                 }
+                bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
                 book.setItemMeta(bookmeta);
+                commentCache.put(c.getId(), cn);
                 chest.getInventory().addItem(book);
             } else {
                 break;
