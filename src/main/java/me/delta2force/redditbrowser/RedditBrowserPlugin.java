@@ -96,7 +96,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     	reader.close();
     	stream.close();
     	
-    	if(gar.tag_name != this.getDescription().getVersion()) {
+    	if(!this.getDescription().getVersion().contains(gar.tag_name)) {
     		this.getServer().getLogger().info("Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
     	}
     }
