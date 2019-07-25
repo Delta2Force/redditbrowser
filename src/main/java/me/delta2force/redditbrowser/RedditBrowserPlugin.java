@@ -3,6 +3,7 @@ package me.delta2force.redditbrowser;
 import me.delta2force.redditbrowser.generator.RedditGenerator;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
+import me.delta2force.redditbrowser.math.InteractiveLocation;
 import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
@@ -51,9 +52,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
-
     private List<UUID> redditBrowsers = new ArrayList<>();
-
+    
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
     public EventListener listener;
