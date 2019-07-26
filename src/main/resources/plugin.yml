@@ -1,6 +1,6 @@
 name: RedditBrowser
 author: Delta2Force
-version: 1.6
+version: 1.6.1
 api-version: 1.13
 main: me.delta2force.redditbrowser.RedditBrowserPlugin
 
