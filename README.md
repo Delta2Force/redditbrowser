@@ -13,3 +13,5 @@ When you are in the tower, you can upvote the post by clicking the button left o
 You can leave a comment by writing a book using your book and quill and putting it in the comment chest.
 
 You can inspect a comment thread by right clicking on a comment. You will then see the comments under that comment. If you right click on those, you'll see the comments of those, and so on.
+
+### The posts are in a very low resolution since they have to be downscaled to 128x128 to fit on a minecraft map. You can see the post at its highest resolution by right clicking the image.
