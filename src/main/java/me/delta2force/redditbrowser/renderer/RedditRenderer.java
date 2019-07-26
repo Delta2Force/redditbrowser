@@ -17,28 +17,13 @@ import me.delta2force.redditbrowser.RedditBrowserPlugin;
 public class RedditRenderer extends MapRenderer{
 	public BufferedImage image;
 	
-	public RedditRenderer(final String url, RedditBrowserPlugin reddit) {
-		reddit.runnableQueue.add(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					BufferedImage bi = ImageIO.read(new URL(url));
-					image = new BufferedImage(128, 128, BufferedImage.TYPE_INT_ARGB);
-					image.createGraphics().drawImage(bi, 0, 0, 128, 128, null);
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			@Override
-			public String toString() {
-				return url;
-			}
-		});
+	public RedditRenderer() {
 	}
-	
+
+	public void setImage(BufferedImage image) {
+		this.image = image;
+	}
+
 	@Override
 	public void render(MapView mv, MapCanvas mc, Player p) {
 		if(image != null) {

@@ -9,10 +9,7 @@ import net.dean.jraw.tree.CommentNode;
 import java.util.Arrays;
 import java.util.List;
 
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -31,7 +28,8 @@ import com.google.gson.Gson;
 
 public class EventListener implements Listener {
 
-    private RedditBrowserPlugin reddit;
+	public static final float VOLUME = 75f;
+	private RedditBrowserPlugin reddit;
 
     public EventListener(RedditBrowserPlugin reddit) {
         this.reddit = reddit;
@@ -77,14 +75,16 @@ public class EventListener implements Listener {
     }
     
     public InteractiveLocation getInteractionAt(Location loc) {
-    	int x = loc.getBlockX();
-    	int y = loc.getBlockY();
-    	int z = loc.getBlockZ();
-    	for(InteractiveLocation inloc : reddit.interactiveSubmissionID.keySet()) {
-    		if(inloc.getX() == x && inloc.getY() == y && inloc.getZ() == z) {
-    			return inloc;
-    		}
-    	}
+    	if(loc != null) {
+			int x = loc.getBlockX();
+			int y = loc.getBlockY();
+			int z = loc.getBlockZ();
+			for (InteractiveLocation inloc : reddit.interactiveSubmissionID.keySet()) {
+				if (inloc.getX() == x && inloc.getY() == y && inloc.getZ() == z) {
+					return inloc;
+				}
+			}
+		}
     	return null;
     }
     
@@ -94,17 +94,20 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma(event.getPlayer());
-    	if(getInteractionAt(event.getClickedBlock().getLocation()) != null) {
+    	if(event.getClickedBlock() != null && getInteractionAt(event.getClickedBlock().getLocation()) != null) {
     		InteractiveLocation inLoc = getInteractionAt(event.getClickedBlock().getLocation());
     		if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.UPVOTE) {
-        		String submissionID = inLoc.getSubmissionId();
+				event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
+				event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post!");
+				String submissionID = inLoc.getSubmissionId();
         		reddit.reddit.submission(submissionID).upvote();
-        		event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post!");
-    		}else if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.DOWNVOTE) {
-    			String submissionID = inLoc.getSubmissionId();
+
+			}else if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.DOWNVOTE) {
+				event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
+				event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
+				String submissionID = inLoc.getSubmissionId();
         		reddit.reddit.submission(submissionID).downvote();
-        		event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
-        	}
+			}
     	}
     }
     

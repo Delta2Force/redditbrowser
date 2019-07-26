@@ -5,7 +5,7 @@ import me.delta2force.redditbrowser.interaction.InteractiveEnum;
 import me.delta2force.redditbrowser.interaction.InteractiveLocation;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
-import me.delta2force.redditbrowser.renderer.RedditRenderer;
+import me.delta2force.redditbrowser.renderer.TiledRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
 import net.dean.jraw.http.UserAgent;
@@ -62,6 +62,9 @@ import java.util.UUID;
 
 public class RedditBrowserPlugin extends JavaPlugin {
 
+    public static final int ROOM_DEPTH = 6;
+    public static final int ROOM_HEIGHT = 6;
+    public static final int ROOM_WIDTH = 4;
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
     private Map<UUID, Integer> beforeTPExperience = new HashMap<>();
@@ -167,7 +170,12 @@ public class RedditBrowserPlugin extends JavaPlugin {
             }
         }
         p.teleport(l.clone().add(0, 1, 0));
-        p.getInventory().addItem(new ItemStack(Material.OAK_SIGN, 16));
+        try {
+            p.getInventory().addItem(new ItemStack(Material.OAK_SIGN, 16));
+        } catch (NoSuchFieldError e) {
+            //Older version like 1.13.x
+            p.getInventory().addItem(new ItemStack(Material.LEGACY_SIGN, 16));
+        }
         p.sendMessage(ChatColor.GREEN + "There you go!");
     }
 
@@ -188,10 +196,10 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public void setRoom(Location l, String submissionId) {
         Submission s = reddit.submission(submissionId).inspect();
         RootCommentNode rcn = reddit.submission(submissionId).comments();
-        cube(Material.POLISHED_ANDESITE, l, l.clone().add(-4, -4, -4));
-        cube(Material.AIR, l.clone().add(-1, -1, -1), l.clone().add(-3, -3, -3));
+        cube(Material.POLISHED_ANDESITE, l, l.clone().add(-ROOM_WIDTH, -ROOM_HEIGHT, -ROOM_DEPTH));
+        cube(Material.AIR, l.clone().add(-1, -1, -1), l.clone().add(-ROOM_WIDTH + 1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
 
-        for (int y = l.getBlockY(); y > l.getBlockY() - 4; y--) {
+        for (int y = l.getBlockY(); y > l.getBlockY() - ROOM_HEIGHT; y--) {
             Block block = new Location(l.getWorld(), l.getBlockX() - 2, y, l.getBlockZ() - 1).getBlock();
             block.setType(Material.LADDER);
             Ladder ladder = (Ladder) block.getBlockData();
@@ -200,46 +208,43 @@ public class RedditBrowserPlugin extends JavaPlugin {
             block.getState().update();
         }
 
-        Block b = l.clone().add(-2, -3, -3).getBlock();
+        Block b = l.clone().add(-2, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1).getBlock();
         b.setType(Material.CHEST);
-        
-        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), s.getId()), InteractiveEnum.COMMENT_CHEST);
-        
-        Chest chest = (Chest) b.getState();
 
+        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), s.getId()), InteractiveEnum.COMMENT_CHEST);
+
+        Chest chest = (Chest) b.getState();
         Location bl = b.getLocation();
         String title = s.getTitle();
+        int titleBaseYPlacement = ROOM_HEIGHT - 4;
+
         if (title.length() > 15) {
-            spawnHologram(bl.clone().add(.5, .5, .5), title.substring(0, 15));
+            spawnHologram(bl.clone().add(.5, titleBaseYPlacement + .5, .5), title.substring(0, 15));
             if (title.length() > 30) {
-                spawnHologram(bl.clone().add(.5, .25, .5), title.substring(15, 30));
+                spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.25, .5), title.substring(15, 30));
                 if (title.length() > 45) {
-                    spawnHologram(bl.clone().add(.5, 0, .5), title.substring(30, 45));
+                    spawnHologram(bl.clone().add(.5, titleBaseYPlacement, .5), title.substring(30, 45));
                 } else {
-                    spawnHologram(bl.clone().add(.5, 0, .5), title.substring(30));
+                    spawnHologram(bl.clone().add(.5, titleBaseYPlacement, .5), title.substring(30));
                 }
             } else {
-                spawnHologram(bl.clone().add(.5, .25, .5), title.substring(15));
+                spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.25, .5), title.substring(15));
             }
         } else {
-            spawnHologram(bl.clone().add(.5, .5, .5), title);
+            spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.5, .5), title);
         }
 
-        spawnHologram(bl.clone().add(.5, -.25, .5), colorCode("6") + s.getScore());
+        spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.25, .5), colorCode("6") + s.getScore());
 
-        l.getWorld().getBlockAt(l.clone().add(-2, -2, -2)).setType(Material.POLISHED_ANDESITE);
 
-        ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(-2, -2, -3), EntityType.ITEM_FRAME);
-        itf.setFacingDirection(BlockFace.SOUTH);
-        
-        Block uv = l.getWorld().getBlockAt(l.clone().add(-3, -2, -3));
+        Block uv = l.getWorld().getBlockAt(l.clone().add(-ROOM_WIDTH+1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
         uv.setType(Material.OAK_BUTTON);
         Directional uvdir = (Directional) uv.getBlockData();
         uvdir.setFacing(BlockFace.SOUTH);
         uv.setBlockData(uvdir);
         interactiveSubmissionID.put(new InteractiveLocation(uv.getLocation(), s.getId()), InteractiveEnum.UPVOTE);
-        
-        Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -2, -3));
+
+        Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
         dv.setType(Material.OAK_BUTTON);
         Directional dvdir = (Directional) dv.getBlockData();
         dvdir.setFacing(BlockFace.SOUTH);
@@ -266,19 +271,16 @@ public class RedditBrowserPlugin extends JavaPlugin {
             } else {
                 bookmeta.addPage(s.getSelfText());
             }
+            ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(-2, -2, -ROOM_DEPTH +1), EntityType.ITEM_FRAME);
+            itf.setFacingDirection(BlockFace.SOUTH);
+
             book.setItemMeta(bookmeta);
             itf.setItem(book);
         } else {
-            ItemStack map = new ItemStack(Material.FILLED_MAP);
-            MapMeta mapMeta = (MapMeta) map.getItemMeta();
-            MapView mv = Bukkit.createMap(l.getWorld());
-            mv.addRenderer(new RedditRenderer(s.getUrl(), this));
-            mapMeta.setMapView(mv);
-            map.setItemMeta(mapMeta);
-            itf.setItem(map);
+            createTiledMapView(l, s.getUrl());
         }
 
-        l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
+        l.clone().add(-ROOM_WIDTH/2, -2, -ROOM_DEPTH + 2).getBlock().setType(Material.AIR);
         
         chest.setCustomName(UUID.randomUUID().toString());
         
@@ -313,6 +315,27 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
     }
 
+    private void createTiledMapView (Location l, String url) {
+        int tileWidth = 3;
+        int tileHeight = 3;
+        TiledRenderer tiledRenderer = new TiledRenderer(url, this, tileWidth, tileHeight);
+        int titleXStart = tileWidth * -1;
+        int titleYStart = -2;
+        for(int y = 0; y < tileHeight; y++) {
+            for(int x = 0; x < tileWidth ; x++) {
+                ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(titleXStart +x , titleYStart -y, -ROOM_DEPTH +1), EntityType.ITEM_FRAME);
+                itf.setFacingDirection(BlockFace.SOUTH);
+                ItemStack map = new ItemStack(Material.FILLED_MAP);
+                MapMeta mapMeta = (MapMeta) map.getItemMeta();
+                MapView mv = Bukkit.createMap(l.getWorld());
+                mv.addRenderer(tiledRenderer.getRenderer(y, x));
+                mapMeta.setMapView(mv);
+                map.setItemMeta(mapMeta);
+                itf.setItem(map);
+            }
+        }
+    }
+
     public void cube(Material blockMaterial, Location from, Location to) {
         for (int x = from.getBlockX(); x >= to.getBlockX(); x--) {
             for (int y = from.getBlockY(); y >= to.getBlockY(); y--) {
@@ -342,7 +365,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
             Submission s = ll.next();
             final int index = i;
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                setRoom(l.clone().add(0, -4 * index, 0), s.getId());
+                setRoom(l.clone().add(0, -ROOM_HEIGHT * index, 0), s.getId());
                 p.sendMessage(""+ChatColor.DARK_GREEN + (index+1) + " / 27 posts built");
                 if(index == 24) {
                 	p.teleport(l.clone().add(0, 4, 0));
@@ -359,9 +382,11 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 	Bukkit.getScheduler().runTaskAsynchronously(this, t);
             	}
             	runnableQueue.clear();
-                BukkitTask bt = task.get(0);
-                task.remove(0);
-                bt.cancel();
+                if(!task.isEmpty()) {
+                    BukkitTask bt = task.get(0);
+                    task.remove(0);
+                    bt.cancel();
+                }
             }
             try {
                 Thread.sleep(1500);
