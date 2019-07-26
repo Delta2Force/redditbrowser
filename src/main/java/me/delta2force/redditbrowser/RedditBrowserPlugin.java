@@ -72,7 +72,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
     public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
-    
+    public Map<String, ArmorStand> submissionArmorStands = new HashMap<>();
+
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
     public EventListener listener;
@@ -101,7 +102,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     	stream.close();
     	
     	if(!this.getDescription().getVersion().contains(gar.tag_name)) {
-    		this.getServer().getLogger().info("Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
+    		this.getServer().broadcastMessage(ChatColor.LIGHT_PURPLE + "Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
     	}
     }
 
@@ -122,7 +123,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     public void attemptConnect() {
         Client client = new Client(this);
         Credentials oauthCreds = Credentials.script(client.getUsername(), client.getPassword(), client.getClientId(), client.getClientSecret());
-        UserAgent userAgent = new UserAgent("bot", "reddit.minecraft.browser", "1.0.0", client.getUsername());
+        UserAgent userAgent = new UserAgent("bot", "reddit.minecraft.browser", this.getDescription().getVersion(), client.getUsername());
         reddit = OAuthHelper.automatic(new OkHttpNetworkAdapter(userAgent), oauthCreds);
     }
 
@@ -179,7 +180,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         p.sendMessage(ChatColor.GREEN + "There you go!");
     }
 
-    public void spawnHologram(Location l, String name) {
+    public ArmorStand spawnHologram(Location l, String name) {
         ArmorStand as = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
         as.setCustomName(name);
         as.setCustomNameVisible(true);
@@ -187,6 +188,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         as.setVisible(false);
         as.setInvulnerable(true);
         as.setCollidable(false);
+        return as;
     }
     
     public String colorCode(String color) {
@@ -234,7 +236,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
             spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.5, .5), title);
         }
 
-        spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.25, .5), colorCode("6") + s.getScore());
+        submissionArmorStands.put(s.getId(), spawnHologram(bl.clone().add(.5, -.25, .5), colorCode("6") + s.getScore()));
 
 
         Block uv = l.getWorld().getBlockAt(l.clone().add(-ROOM_WIDTH+1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));

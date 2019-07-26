@@ -3,6 +3,7 @@ package me.delta2force.redditbrowser.listeners;
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
 import me.delta2force.redditbrowser.interaction.InteractiveLocation;
+import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.tree.CommentNode;
 
@@ -11,6 +12,8 @@ import java.util.List;
 
 import org.bukkit.*;
 import org.bukkit.block.Chest;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,17 +21,20 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.map.MapRenderer;
 
 import com.google.gson.Gson;
 
 public class EventListener implements Listener {
 
-	public static final float VOLUME = 75f;
+	private static final float VOLUME = 75f;
 	private RedditBrowserPlugin reddit;
 
     public EventListener(RedditBrowserPlugin reddit) {
@@ -62,6 +68,11 @@ public class EventListener implements Listener {
             // Get the sub they want
             String sub = line.replaceFirst("r/", "");
             
+            // If it's pewds' subreddit, display LWIAY title
+            if(sub.equalsIgnoreCase("pewdiepiesubmissions")) {
+            	player.sendTitle(reddit.colorCode("4")+"L"+reddit.colorCode("a")+"W"+reddit.colorCode("1")+"I"+reddit.colorCode("d")+"A"+reddit.colorCode("e")+"Y", "", 10, 70, 20);
+            }
+
             // Set the player to spectator mode
             player.setGameMode(GameMode.SPECTATOR);
             // Send them a message
@@ -94,20 +105,27 @@ public class EventListener implements Listener {
              return;
          }
     	 reddit.setKarma(event.getPlayer());
-    	if(event.getClickedBlock() != null && getInteractionAt(event.getClickedBlock().getLocation()) != null) {
+    	if(getInteractionAt(event.getClickedBlock().getLocation()) != null) {
     		InteractiveLocation inLoc = getInteractionAt(event.getClickedBlock().getLocation());
     		if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.UPVOTE) {
 				event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
-				event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post!");
+
 				String submissionID = inLoc.getSubmissionId();
-        		reddit.reddit.submission(submissionID).upvote();
+				reddit.reddit.submission(submissionID).upvote();
+				int karma = reddit.reddit.submission(submissionID).inspect().getScore();
+				event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post! It now has " + karma + " karma.");
+				ArmorStand as = reddit.submissionArmorStands.get(submissionID);
+				as.setCustomName(reddit.colorCode("6") + karma);
 
 			}else if(reddit.interactiveSubmissionID.get(inLoc) == InteractiveEnum.DOWNVOTE) {
-				event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post!");
 				event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
 				String submissionID = inLoc.getSubmissionId();
-        		reddit.reddit.submission(submissionID).downvote();
-			}
+				reddit.reddit.submission(submissionID).downvote();
+				int karma = reddit.reddit.submission(submissionID).inspect().getScore();
+				event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post! It now has " + karma + " karma.");
+				ArmorStand as = reddit.submissionArmorStands.get(submissionID);
+				as.setCustomName(reddit.colorCode("6") + karma);
+        	}
     	}
     }
     
@@ -159,6 +177,26 @@ public class EventListener implements Listener {
     	}
     }
     
+    @EventHandler
+    public void interactEntity(PlayerInteractAtEntityEvent event) {
+    	Player p = event.getPlayer();
+    	if(event.getRightClicked() instanceof ItemFrame) {
+    		ItemFrame itemframe = (ItemFrame) event.getRightClicked();
+    		if(itemframe.getItem().getType().equals(Material.FILLED_MAP)) {
+    			ItemStack map = itemframe.getItem();
+    			MapMeta mapMeta = (MapMeta) map.getItemMeta();
+    			for(MapRenderer mr : mapMeta.getMapView().getRenderers()) {
+    				if(mr instanceof RedditRenderer) {
+    					//Bingo!
+    					RedditRenderer rr = (RedditRenderer) mr;
+    					p.sendMessage(ChatColor.YELLOW + "Image/Video link: " + ChatColor.BLUE + ChatColor.UNDERLINE + rr.url);
+    					event.setCancelled(true);
+    				}
+    			}
+    		}
+    	}
+    }
+
     @EventHandler
     public void closeInventory(InventoryCloseEvent event) {
     	 if (!reddit.getRedditBrowsers().contains(event.getPlayer().getUniqueId())) {
