@@ -29,6 +29,7 @@ import org.bukkit.WorldCreator;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Chest;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Ladder;
 import org.bukkit.command.Command;
@@ -41,6 +42,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
+import org.bukkit.material.Torch;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -210,8 +212,27 @@ public class RedditBrowserPlugin extends JavaPlugin {
             block.getState().update();
         }
 
-        Block b = l.clone().add(-2, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1).getBlock();
+        Block torch = l.clone().add(-1, -1, -ROOM_DEPTH / 2).getBlock();
+        torch.setType(Material.WALL_TORCH, true);
+        Directional blockData = (Directional) torch.getBlockData();
+        blockData.setFacing(BlockFace.WEST);
+        torch.setBlockData(blockData);
+        torch.getState().update();
+
+        Block torch2 = l.clone().add(-ROOM_WIDTH + 1, -1, -ROOM_DEPTH / 2).getBlock();
+        torch2.setType(Material.WALL_TORCH, true);
+        Directional blockData2 = (Directional) torch2.getBlockData();
+        blockData2.setFacing(BlockFace.EAST);
+        torch2.setBlockData(blockData2);
+        torch2.getState().update();
+
+
+        Location chestLocation = l.clone().add(-ROOM_WIDTH / 2, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1);
+        Block b = chestLocation.getBlock();
         b.setType(Material.CHEST);
+        Directional chestDirection = (Directional) b.getBlockData();
+        chestDirection.setFacing(BlockFace.SOUTH);
+        b.setBlockData(chestDirection);
 
         interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), s.getId()), InteractiveEnum.COMMENT_CHEST);
 
@@ -236,7 +257,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
             spawnHologram(bl.clone().add(.5, titleBaseYPlacement +.5, .5), title);
         }
 
-        submissionArmorStands.put(s.getId(), spawnHologram(bl.clone().add(.5, -.25, .5), colorCode("6") + s.getScore()));
+        submissionArmorStands.put(s.getId(), spawnHologram(bl.clone().add(.5, titleBaseYPlacement -.25, .5), colorCode("6") + s.getScore()));
 
 
         Block uv = l.getWorld().getBlockAt(l.clone().add(-ROOM_WIDTH+1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));

@@ -26,7 +26,7 @@ public class TiledRenderer {
         tiles = new RedditRenderer[tileWidth][tileHeight];
         for(int y = 0; y < tileHeight; y++) {
             for(int x = 0; x < tileWidth; x++) {
-                tiles[x][y] = new RedditRenderer();
+                tiles[x][y] = new RedditRenderer(url);
             }
         }
         reddit.runnableQueue.add(new Runnable() {

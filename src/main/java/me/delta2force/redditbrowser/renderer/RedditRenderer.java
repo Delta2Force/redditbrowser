@@ -16,8 +16,10 @@ import me.delta2force.redditbrowser.RedditBrowserPlugin;
 
 public class RedditRenderer extends MapRenderer{
 	public BufferedImage image;
-	
-	public RedditRenderer() {
+	public String url;
+
+	public RedditRenderer(String url) {
+		this.url = url;
 	}
 
 	public void setImage(BufferedImage image) {
