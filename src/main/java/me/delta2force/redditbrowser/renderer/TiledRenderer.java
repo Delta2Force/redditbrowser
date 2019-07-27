@@ -8,12 +8,15 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 public class TiledRenderer {
-    public static final int IMAGE_SIZE = 128;
+    private static final int IMAGE_SIZE = 128;
+    public static final Pattern PATTERN = Pattern.compile("https:\\/\\/imgur\\.com\\/(.*)");
     private final RedditRenderer[][] tiles;
     private final String url;
-    @org.jetbrains.annotations.NotNull
     private final RedditBrowserPlugin reddit;
 
     public TiledRenderer(
@@ -23,28 +26,20 @@ public class TiledRenderer {
             int tileHeight) {
         this.url = url;
         this.reddit = reddit;
-        tiles = new RedditRenderer[tileWidth][tileHeight];
-        for(int y = 0; y < tileHeight; y++) {
-            for(int x = 0; x < tileWidth; x++) {
-                tiles[x][y] = new RedditRenderer(url);
+        tiles = new RedditRenderer[tileHeight][tileWidth];
+        for(int row = 0; row < tileHeight; row++) {
+            for(int col = 0; col < tileWidth; col++) {
+                tiles[row][col] = new RedditRenderer(url);
             }
         }
+        scheduleFindImage(tileWidth, tileHeight);
+    }
+
+    void scheduleFindImage(int tileWidth, int tileHeight) {
         reddit.runnableQueue.add(new Runnable() {
             @Override
             public void run() {
-                try {
-                    BufferedImage bi = ImageIO.read(new URL(url));
-                    BufferedImage image = new BufferedImage(IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, BufferedImage.TYPE_INT_ARGB);
-                    image.createGraphics().drawImage(bi, 0, 0, IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, null);
-                    BufferedImage[][] bufferedImages = splitImage(image, tileHeight, tileWidth);
-                    for(int y = 0; y < tileHeight; y++) {
-                        for(int x = 0; x < tileWidth; x++) {
-                            tiles[y][x].setImage(bufferedImages[y][x]);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                findImage(tileWidth, tileHeight);
             }
 
             @Override
@@ -54,22 +49,53 @@ public class TiledRenderer {
         });
     }
 
+    void findImage(int tileWidth, int tileHeight) {
+        try {
+            BufferedImage bi = ImageIO.read(new URL(replaceImgUr(url)));
+            BufferedImage image = new BufferedImage(IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, BufferedImage.TYPE_INT_ARGB);
+            image.createGraphics().drawImage(bi, 0, 0, IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, null);
+            BufferedImage[][] bufferedImages = splitImage(image, tileHeight, tileWidth);
+            for(int row = 0; row < tileHeight; row++) {
+                for(int col = 0; col < tileWidth; col++) {
+                    tiles[row][col].setImage(bufferedImages[row][col]);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private BufferedImage[][] splitImage(BufferedImage image, int rows, int cols) {
         BufferedImage[][] imgs = new BufferedImage[rows][cols]; //Image array to hold image chunks
-        for (int y = 0; y < cols; y++) {
-            for (int x = 0; x < rows; x++) {
-                imgs[y][x] = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, image.getType());
+        for (int col = 0; col < cols; col++) {
+            for (int row = 0; row < rows; row++) {
+                imgs[row][col] = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, image.getType());
 
-                Graphics2D gr = imgs[y][x].createGraphics();
-                gr.drawImage(image, 0, 0, IMAGE_SIZE, IMAGE_SIZE, IMAGE_SIZE * x, IMAGE_SIZE * y, IMAGE_SIZE * ( x +1), IMAGE_SIZE * (y + 1), null);
+                Graphics2D gr = imgs[row][col].createGraphics();
+                gr.drawImage(image, 0, 0,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE * col,
+                        IMAGE_SIZE * row,
+                        IMAGE_SIZE * ( col +1),
+                        IMAGE_SIZE * (row + 1),
+                        null);
                 gr.dispose();
             }
         }
         return imgs;
     }
 
-    public MapRenderer getRenderer(int y, int x) {
-        return tiles[y][x];
+    public MapRenderer getRenderer(int row, int col) {
+        return tiles[row][col];
+    }
+
+    private String replaceImgUr(String url) {
+        Matcher matcher = PATTERN.matcher(url);
+        if(matcher.matches()) {
+            String group = matcher.group(1);
+            return "https://i.imgur.com/" + group+ ".jpg";
+        }
+        return url;
     }
 }

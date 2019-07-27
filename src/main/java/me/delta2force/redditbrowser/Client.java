@@ -8,6 +8,8 @@ public class Client {
     private String password;
     private String clientId;
     private String clientSecret;
+    private boolean commentsEnabled;
+    private int maxPosts;
 
     public Client(RedditBrowserPlugin reddit) {
         FileConfiguration config = reddit.getConfig();
@@ -15,6 +17,8 @@ public class Client {
         this.password = config.getString("password");
         this.clientId = config.getString("clientId");
         this.clientSecret = config.getString("clientSecret");
+        this.maxPosts = config.getInt("maxPosts");
+        this.commentsEnabled = config.getBoolean("commentsEnabled");
     }
 
     public String getUsername() {
@@ -47,5 +51,21 @@ public class Client {
 
     public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    public boolean isCommentsEnabled() {
+        return commentsEnabled;
+    }
+
+    public void setCommentsEnabled(boolean commentsEnabled) {
+        this.commentsEnabled = commentsEnabled;
+    }
+
+    public int getMaxPosts() {
+        return maxPosts;
+    }
+
+    public void setMaxPosts(int maxPosts) {
+        this.maxPosts = maxPosts;
     }
 }

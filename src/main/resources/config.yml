@@ -2,3 +2,5 @@ username: "exampleUsername"
 password: "examplePassword"
 clientId: "exampleClientId"
 clientSecret: "exampleClientSecret"
+maxPosts: 27
+commentsEnabled: false
