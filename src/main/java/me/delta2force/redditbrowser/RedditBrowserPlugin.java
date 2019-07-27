@@ -2,10 +2,10 @@ package me.delta2force.redditbrowser;
 
 import com.google.gson.Gson;
 import me.delta2force.redditbrowser.generator.RedditGenerator;
-import me.delta2force.redditbrowser.interaction.InteractiveEnum;
+import me.delta2force.redditbrowser.generator.RoomDimensions;
+import me.delta2force.redditbrowser.generator.RoomGenerator;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
-import me.delta2force.redditbrowser.renderer.TiledRenderer;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
 import net.dean.jraw.http.UserAgent;
@@ -18,26 +18,16 @@ import net.dean.jraw.tree.CommentNode;
 import net.dean.jraw.tree.RootCommentNode;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.Chest;
-import org.bukkit.block.data.Bisected;
-import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.type.Door;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapView;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -48,16 +38,12 @@ import java.net.URL;
 import java.util.*;
 
 public class RedditBrowserPlugin extends JavaPlugin {
-    private static final int SCREEN_WIDTH_HEIGHT = 8;
-    private static final int ROOM_DEPTH = 8;
-    private static final int ROOM_HEIGHT = SCREEN_WIDTH_HEIGHT + 2;
-    private static final int ROOM_WIDTH = SCREEN_WIDTH_HEIGHT + 1;
     public static final String SUBMISSION_ID = "submissionId";
     public static final String INTERACTIVE_ENUM = "interactiveEnum";
     public static final String REDDIT_POST_TITLE = "redditPostTitle";
     public static final String REDDIT_POST_SCORE = "redditPostScore";
     public static final String REDDIT_POST_AUTHOR= "redditPostAuthor";
-    public static final int TITLE_LENGHT_LIMIT = 64;
+    private static final int TITLE_LENGHT_LIMIT = 64;
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
@@ -69,7 +55,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
     private List<BukkitTask> task = new ArrayList<>();
     public RedditClient reddit;
     public EventListener listener;
-    private Client client;
+    private RoomGenerator roomGenerator = new RoomGenerator(this);
 
     @Override
     public void onEnable() {
@@ -79,8 +65,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         Bukkit.getServer().getPluginManager().registerEvents(listener, this);
         try {
             checkLatestVersion();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -120,14 +104,9 @@ public class RedditBrowserPlugin extends JavaPlugin {
         reddit = OAuthHelper.automatic(new OkHttpNetworkAdapter(userAgent), oauthCreds);
     }
 
-
     private Client getClient() {
-        if (client == null) {
-            client = new Client(this);
-        }
-        return client;
+        return new Client(this);
     }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
@@ -193,146 +172,17 @@ public class RedditBrowserPlugin extends JavaPlugin {
         try {
             player.getInventory().addItem(new ItemStack(Material.OAK_SIGN, 16));
         } catch (NoSuchFieldError e) {
-            //Older version like 1.13.x
+            //Older versions like 1.13.x
             player.getInventory().addItem(new ItemStack(Material.LEGACY_SIGN, 16));
         }
     }
 
-    public ArmorStand spawnHologram(Location l, String name) {
-        ArmorStand as = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
-        as.setCustomName(name);
-        as.setCustomNameVisible(true);
-        as.setGravity(false);
-        as.setVisible(false);
-        as.setInvulnerable(true);
-        as.setCollidable(false);
-        return as;
-    }
 
-    public String colorCode(String color) {
+    public static String colorCode(String color) {
         return (char) (0xfeff00a7) + color;
     }
 
-    public void setRoom(Location l, Submission s, RootCommentNode comments, boolean firstRoom, Player player) {
-        cube(Material.POLISHED_ANDESITE, l, l.clone().add(-ROOM_WIDTH, -ROOM_HEIGHT, -ROOM_DEPTH));
-        cube(Material.AIR, l.clone().add(-1, -1, -1), l.clone().add(-ROOM_WIDTH + 1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
 
-        if (!firstRoom) {
-            putDoor(l.clone().add(-ROOM_WIDTH, -ROOM_HEIGHT + 1, (-ROOM_DEPTH / 2) + 1));
-            Block pressurePlateLeft = l.clone().add(-ROOM_WIDTH + 1, -ROOM_HEIGHT + 1, (-ROOM_DEPTH / 2) + 1).getBlock();
-            pressurePlateLeft.setType(Material.STONE_PRESSURE_PLATE);
-            pressurePlateLeft.setMetadata(REDDIT_POST_TITLE, new FixedMetadataValue(this, s.getTitle()));
-            pressurePlateLeft.setMetadata(REDDIT_POST_SCORE, new FixedMetadataValue(this,s.getScore()));
-            pressurePlateLeft.setMetadata(REDDIT_POST_AUTHOR, new FixedMetadataValue(this,s.getAuthor()));
-            pressurePlateLeft.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(this, InteractiveEnum.ROOM_ENTERED));
-        }
-        Block pressurePlateRight = l.clone().add(-1, -ROOM_HEIGHT + 1, (-ROOM_DEPTH / 2) + 1).getBlock();
-        pressurePlateRight.setType(Material.STONE_PRESSURE_PLATE);
-        pressurePlateRight.setMetadata(REDDIT_POST_TITLE, new FixedMetadataValue(this, s.getTitle()));
-        pressurePlateRight.setMetadata(REDDIT_POST_SCORE, new FixedMetadataValue(this,s.getScore()));
-        pressurePlateRight.setMetadata(REDDIT_POST_AUTHOR, new FixedMetadataValue(this,s.getAuthor()));
-        pressurePlateRight.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(this, InteractiveEnum.ROOM_ENTERED));
-
-        Block uv = l.getWorld().getBlockAt(l.clone().add(-ROOM_WIDTH + 1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
-        uv.setType(Material.OAK_BUTTON);
-        uv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(this, s.getId()));
-        uv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(this, InteractiveEnum.UPVOTE));
-        Directional uvdir = (Directional) uv.getBlockData();
-        uvdir.setFacing(BlockFace.SOUTH);
-        uv.setBlockData(uvdir);
-
-
-        Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1));
-        dv.setType(Material.OAK_BUTTON);
-        dv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(this, s.getId()));
-        dv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(this, InteractiveEnum.DOWNVOTE));
-
-        Directional dvdir = (Directional) dv.getBlockData();
-        dvdir.setFacing(BlockFace.SOUTH);
-        dv.setBlockData(dvdir);
-
-        spawnHologram(uv.getLocation().clone().add(.5, -2, .5), colorCode("a") + "+1");
-        spawnHologram(dv.getLocation().clone().add(.5, -2, .5), colorCode("c") + "-1");
-
-        if (s.isSelfPost()) {
-            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-            BookMeta bookmeta = (BookMeta) book.getItemMeta();
-            bookmeta.setTitle(s.getTitle());
-            bookmeta.setAuthor(s.getAuthor());
-            if (s.getSelfText().length() > 255) {
-                double f = Math.ceil(((float) s.getSelfText().length()) / 255f);
-                for (int i = 0; i < f; i++) {
-                    if (s.getSelfText().length() < (i + 1) * 255) {
-                        bookmeta.addPage(s.getSelfText().substring(i * 255, s.getSelfText().length()));
-                    } else {
-                        bookmeta.addPage(s.getSelfText().substring(i * 255, (i + 1) * 255));
-                    }
-                }
-            } else {
-                bookmeta.addPage(s.getSelfText());
-            }
-            ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(-(ROOM_WIDTH / 2), -ROOM_HEIGHT+2, -ROOM_DEPTH + 1), EntityType.ITEM_FRAME);
-            itf.setFacingDirection(BlockFace.SOUTH);
-
-            book.setItemMeta(bookmeta);
-            itf.setItem(book);
-        } else {
-            try {
-                createTiledMapView(l, s.getUrl());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        //l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
-
-        if (comments != null) {
-            Location chestLocation = l.clone().add(-ROOM_WIDTH / 2, -ROOM_HEIGHT + 1, -ROOM_DEPTH + 1);
-            Block b = chestLocation.getBlock();
-
-            b.setType(Material.CHEST);
-            Directional chestDirection = (Directional) b.getBlockData();
-            chestDirection.setFacing(BlockFace.SOUTH);
-            b.setBlockData(chestDirection);
-            b.setMetadata(SUBMISSION_ID, new FixedMetadataValue(this, s.getId()));
-            b.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(this, InteractiveEnum.COMMENT_CHEST));
-            Chest chest = (Chest) b.getState();
-
-            chest.setCustomName(UUID.randomUUID().toString());
-
-            chest.setCustomName(UUID.randomUUID().toString());
-
-            int in = 0;
-            for (CommentNode<Comment> cn : comments.getReplies()) {
-                Comment c = cn.getSubject();
-                if (in < 26) {
-                    ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-                    BookMeta bookmeta = (BookMeta) book.getItemMeta();
-                    bookmeta.setTitle("Comment");
-                    bookmeta.setAuthor("u/" + c.getAuthor());
-                    if (c.getBody().length() > 255) {
-                        double f = Math.ceil(((float) c.getBody().length()) / 255f);
-                        for (int i = 0; i < f; i++) {
-                            if (c.getBody().length() < (i + 1) * 255) {
-                                bookmeta.addPage(c.getBody().substring(i * 255));
-                            } else {
-                                bookmeta.addPage(c.getBody().substring(i * 255, (i + 1) * 255));
-                            }
-                        }
-                    } else {
-                        bookmeta.addPage(c.getBody());
-                    }
-                    bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
-                    book.setItemMeta(bookmeta);
-                    commentCache.put(c.getId(), cn);
-                    chest.getInventory().addItem(book);
-                } else {
-                    break;
-                }
-                in++;
-            }
-        }
-    }
 
     public void updateTitle(String title, String author, int score, Player player) {
         ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -353,56 +203,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
         return title;
     }
 
-    private void putDoor(Location location) {
-        final Block bottom = location.getBlock();
-        final Block top = bottom.getRelative(BlockFace.UP, 1);
-        top.setType(Material.OAK_DOOR);
-        Door topDoor = (Door) top.getBlockData();
-        topDoor.setHinge(Door.Hinge.LEFT);
-        topDoor.setHalf(Bisected.Half.TOP);
-        topDoor.setFacing(BlockFace.WEST);
-        top.setBlockData(topDoor);
-        bottom.setType(Material.OAK_DOOR);
-        Door bottomDoor = (Door) bottom.getBlockData();
-        bottomDoor.setHinge(Door.Hinge.LEFT);
-        bottomDoor.setHalf(Bisected.Half.BOTTOM);
-        bottomDoor.setFacing(BlockFace.WEST);
-        bottom.setBlockData(bottomDoor);
-    }
 
-    private void createTiledMapView(Location l, String url) {
-        int tileWidth = SCREEN_WIDTH_HEIGHT;
-        int tileHeight = SCREEN_WIDTH_HEIGHT;
-        TiledRenderer tiledRenderer = new TiledRenderer(url, this, tileWidth, tileHeight);
-        int titleXStart = tileWidth * -1;
-        int titleYStart = -1;
-        for (int row = 0; row < tileHeight; row++) {
-            for (int col = 0; col < tileWidth; col++) {
-                l.clone().add(titleXStart + col, titleYStart - row, -ROOM_DEPTH).getBlock().setType(Material.GLOWSTONE);
-                ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(titleXStart + col, titleYStart - row, -ROOM_DEPTH + 1), EntityType.ITEM_FRAME);
-                itf.setFacingDirection(BlockFace.SOUTH);
-                ItemStack map = new ItemStack(Material.FILLED_MAP);
-                MapMeta mapMeta = (MapMeta) map.getItemMeta();
-                MapView mv = Bukkit.createMap(l.getWorld());
-                mv.setTrackingPosition(false);
-                mv.setUnlimitedTracking(false);
-                mv.addRenderer(tiledRenderer.getRenderer(row, col));
-                mapMeta.setMapView(mv);
-                map.setItemMeta(mapMeta);
-                itf.setItem(map);
-            }
-        }
-    }
-
-    public void cube(Material blockMaterial, Location from, Location to) {
-        for (int x = from.getBlockX(); x >= to.getBlockX(); x--) {
-            for (int y = from.getBlockY(); y >= to.getBlockY(); y--) {
-                for (int z = from.getBlockZ(); z >= to.getBlockZ(); z--) {
-                    from.getWorld().getBlockAt(x, y, z).setType(blockMaterial);
-                }
-            }
-        }
-    }
 
     public void setKarma(Player p) {
         p.setTotalExperience(0);
@@ -415,33 +216,46 @@ public class RedditBrowserPlugin extends JavaPlugin {
     }
 
     public void createTowerAndTP(Player player, String sub, World w) {
+        Client client = getClient();
+        RoomDimensions roomDimensions = createRoomDimensions(client);
         Random r = new Random();
-        Location l = new Location(w, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
+        Location location = new Location(w, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
         Bukkit.getScheduler().runTaskAsynchronously(this , task -> {
+            int maxPosts = client.getMaxPosts();
             Stream<Submission> submissionStream = reddit
                     .subreddit(sub)
                     .posts()
                     .sorting(SubredditSort.HOT)
-                    .limit(getClient().getMaxPosts())
+                    .limit(maxPosts)
                     .build()
                     .stream();
             int i = 0;
             Submission firstSubmission = null;
             if(submissionStream.hasNext()) {
-                while (i < getClient().getMaxPosts() && submissionStream.hasNext()) {
+                while (i < maxPosts && submissionStream.hasNext()) {
                     Submission submission = submissionStream.next();
                     if (i == 0) {
                         firstSubmission = submission;
                     }
-                    RootCommentNode comments = getClient().isCommentsEnabled() ?
+                    RootCommentNode comments = client.isCommentsEnabled() ?
                             reddit.submission(submission.getId()).comments(new CommentsRequest(null, null, 1, 10, CommentSort.TOP)) :
                             null;
 
                     final int index = i;
                     i++;
 
-                    build(player, l, firstSubmission, submission, comments, index, i == getClient().getMaxPosts() || !submissionStream.hasNext());
-                    player.sendMessage("" + ChatColor.GREEN + i + " / " + getClient().getMaxPosts() + " posts loaded");
+                    boolean isLast = i == maxPosts || !submissionStream.hasNext();
+                    runBuildTask(
+                            player,
+                            location,
+                            firstSubmission,
+                            submission,
+                            comments,
+                            index,
+                            isLast,
+                            roomDimensions,
+                            client.getMaxPosts());
+                    player.sendMessage("" + ChatColor.GREEN + i + " / " + maxPosts + " posts loaded");
                 }
             } else {
                 player.sendMessage(ChatColor.RED + "No posts found.");
@@ -450,10 +264,63 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     }
 
-    private void build(Player p, Location l, Submission firstSubmission, Submission s, RootCommentNode comments, int index, boolean isLast) {
+    private void buildRoom(
+            Location location,
+            Submission submission,
+            RootCommentNode comments,
+            boolean isFirst,
+            RoomDimensions roomDimensions) {
+        roomGenerator.createRoom(
+                location,
+                submission,
+                comments,
+                isFirst,
+                roomDimensions
+        );
+
+    }
+
+    @NotNull
+    private RoomDimensions createRoomDimensions(Client client) {
+        int screenWidth = client.getScreenWidth();
+        if(screenWidth < 1) {
+            screenWidth = 1;
+        }
+        int screenHeight = client.getScreenHeight();
+        if(screenHeight < 1) {
+            screenHeight = 1;
+        }
+        int roomDepth = client.getRoomDepth();
+        if(roomDepth < 5) {
+            roomDepth = 5;
+        }
+        int roomHeight = screenHeight > 1 ? screenHeight + 2 : screenHeight + 3;
+        int roomWidth = screenWidth >= 3 ? screenWidth + 1 : screenWidth + 2;
+        if(roomWidth < 4) {
+            roomWidth = 4;
+        }
+        return new RoomDimensions(
+                roomWidth,
+                roomHeight,
+                roomDepth,
+                screenWidth,
+                screenHeight
+        );
+    }
+
+    private void runBuildTask(Player player,
+                              Location location,
+                              Submission firstSubmission,
+                              Submission submission,
+                              RootCommentNode comments,
+                              int index,
+                              boolean isLast,
+                              RoomDimensions roomDimensions,
+                              int maxPosts) {
         Bukkit.getScheduler().runTaskLater(this, () -> {
-            setRoom(l.clone().add(ROOM_WIDTH * index, 0, 0), s, comments, index == 0, p);
-            p.sendMessage("" + ChatColor.DARK_GREEN + (index + 1) + " / " + getClient().getMaxPosts() + " posts built");
+            int nextX = roomDimensions.getRoomWidth() * index;
+            buildRoom(location.clone().add(nextX, 0, 0), submission, comments, index == 0, roomDimensions);
+            player.sendMessage("" + ChatColor.DARK_GREEN + (index + 1) + " / " + maxPosts + " posts built");
             if (isLast) {
                 for (Runnable t : runnableQueue) {
                     Bukkit.getScheduler().runTaskAsynchronously(this, t);
@@ -467,26 +334,22 @@ public class RedditBrowserPlugin extends JavaPlugin {
                 Bukkit.getScheduler().runTaskLater(this, new Runnable() {
                             @Override
                             public void run() {
-                                Location loc = l.clone().add(-ROOM_WIDTH / 2, -ROOM_HEIGHT + 1, -ROOM_DEPTH / 2);
+                                Location loc = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() / 2);
                                 loc.getChunk().load();
-                                updateTitle(firstSubmission.getTitle(), firstSubmission.getAuthor(), firstSubmission.getScore(), p);
                                 loc.setPitch(0);
                                 loc.setYaw(180);
-                                p.teleport(loc);
-                                p.setGameMode(GameMode.SURVIVAL);
-                                p.getInventory().clear();
-                                p.getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
-                                giveSign(p);
 
+                                player.teleport(loc);
+                                player.setGameMode(GameMode.SURVIVAL);
+                                player.getInventory().clear();
+                                player.getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
+                                giveSign(player);
+                                updateTitle(firstSubmission.getTitle(), firstSubmission.getAuthor(), firstSubmission.getScore(), player);
                             }
                         },
-                        10);
+                        100);
             }
         }, 0);
-    }
-
-    public Location roundedLocation(Location loc) {
-        return new Location(loc.getWorld(), (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
     }
 
     public void kickOut(Player p) {
@@ -502,14 +365,6 @@ public class RedditBrowserPlugin extends JavaPlugin {
         beforeTPLocation.remove(p.getUniqueId());
         beforeTPInventory.remove(p.getUniqueId());
         beforeTPExperience.remove(p.getUniqueId());
-    }
-
-    public Map<UUID, Location> getBeforeTPLocation() {
-        return beforeTPLocation;
-    }
-
-    public Map<UUID, RedditInventory> getBeforeTPInventory() {
-        return beforeTPInventory;
     }
 
     public List<UUID> getRedditBrowsers() {

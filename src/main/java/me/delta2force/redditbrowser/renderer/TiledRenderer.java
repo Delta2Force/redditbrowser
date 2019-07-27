@@ -1,6 +1,7 @@
 package me.delta2force.redditbrowser.renderer;
 
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.map.MapRenderer;
 
 import javax.imageio.ImageIO;
@@ -8,13 +9,14 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
 public class TiledRenderer {
     private static final int IMAGE_SIZE = 128;
-    public static final Pattern PATTERN = Pattern.compile("https:\\/\\/imgur\\.com\\/(.*)");
+    private static final Pattern PATTERN = Pattern.compile("https://imgur\\.com/(.*)");
     private final RedditRenderer[][] tiles;
     private final String url;
     private final RedditBrowserPlugin reddit;
@@ -61,7 +63,7 @@ public class TiledRenderer {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            Bukkit.getLogger().log(Level.INFO, "Could not retrieve '%s' as an image. This could be a gif which is not supported or the url isn't a direct link to the image", url);
         }
     }
 
