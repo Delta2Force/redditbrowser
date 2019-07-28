@@ -8,7 +8,8 @@ commands:
  reddit:
   description: browse reddit in minecraft!
   permission: redditbrowser.browse
-
+ reddit-join:
+  description: join a player in an existing lobby.
 permissions:
  redditbrowser.browse:
   default: op

@@ -1,4 +1,4 @@
-package me.delta2force.redditbrowser.generator;
+package me.delta2force.redditbrowser.room;
 
 
 public class RoomDimensions {

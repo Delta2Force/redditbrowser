@@ -2,8 +2,6 @@ username: "exampleUsername"
 password: "examplePassword"
 clientId: "exampleClientId"
 clientSecret: "exampleClientSecret"
-maxPosts: 27
-commentsEnabled: false
-screenWidth: 3
-screenHeight: 3
-roomDepth: 5
+screenWidth: 5
+screenHeight: 5
+roomDepth: 8

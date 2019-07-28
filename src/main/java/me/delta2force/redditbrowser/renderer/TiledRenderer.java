@@ -18,40 +18,39 @@ public class TiledRenderer {
     private static final int IMAGE_SIZE = 128;
     private static final Pattern PATTERN = Pattern.compile("https://imgur\\.com/(.*)");
     private final RedditRenderer[][] tiles;
-    private final String url;
-    private final RedditBrowserPlugin reddit;
-
+    private String url;
+    private final RedditBrowserPlugin redditBrowserPlugin;
+    private final int tileWidth;
+    private final int tileHeight;
     public TiledRenderer(
             String url,
-            RedditBrowserPlugin reddit,
+            RedditBrowserPlugin redditBrowserPlugin,
             int tileWidth,
             int tileHeight) {
         this.url = url;
-        this.reddit = reddit;
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
+
+        this.redditBrowserPlugin = redditBrowserPlugin;
         tiles = new RedditRenderer[tileHeight][tileWidth];
         for(int row = 0; row < tileHeight; row++) {
             for(int col = 0; col < tileWidth; col++) {
                 tiles[row][col] = new RedditRenderer(url);
             }
         }
-        scheduleFindImage(tileWidth, tileHeight);
+        scheduleFindImage();
     }
 
-    void scheduleFindImage(int tileWidth, int tileHeight) {
-        reddit.runnableQueue.add(new Runnable() {
-            @Override
-            public void run() {
-                findImage(tileWidth, tileHeight);
-            }
-
-            @Override
-            public String toString() {
-                return url;
-            }
-        });
+    public void update(String url) {
+        this.url = url;
+        scheduleFindImage();
     }
 
-    void findImage(int tileWidth, int tileHeight) {
+    void scheduleFindImage() {
+        Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, this::findImage);
+    }
+
+    void findImage() {
         try {
             BufferedImage bi = ImageIO.read(new URL(replaceImgUr(url)));
             BufferedImage image = new BufferedImage(IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, BufferedImage.TYPE_INT_ARGB);
@@ -63,7 +62,13 @@ public class TiledRenderer {
                 }
             }
         } catch (IOException e) {
-            Bukkit.getLogger().log(Level.INFO, "Could not retrieve '%s' as an image. This could be a gif which is not supported or the url isn't a direct link to the image", url);
+            Bukkit.getLogger().log(Level.INFO, "Could not retrieve '" + url + "' as an image. This could be a gif which is not supported or the url isn't a direct link to the image");
+            BufferedImage fallbackImage= new BufferedImage(IMAGE_SIZE,IMAGE_SIZE,BufferedImage.TYPE_BYTE_GRAY);
+            for(int row = 0; row < tileHeight; row++) {
+                for(int col = 0; col < tileWidth; col++) {
+                    tiles[row][col].setImage(fallbackImage);
+                }
+            }
         }
     }
 

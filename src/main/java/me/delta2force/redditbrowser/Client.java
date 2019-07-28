@@ -8,8 +8,6 @@ public class Client {
     private String password;
     private String clientId;
     private String clientSecret;
-    private boolean commentsEnabled;
-    private int maxPosts;
     private int screenWidth;
     private int screenHeight;
     private int roomDepth;
@@ -20,8 +18,6 @@ public class Client {
         this.password = config.getString("password");
         this.clientId = config.getString("clientId");
         this.clientSecret = config.getString("clientSecret");
-        this.maxPosts = config.getInt("maxPosts");
-        this.commentsEnabled = config.getBoolean("commentsEnabled");
         this.screenWidth = config.getInt("screenWidth");
         this.screenHeight = config.getInt("screenHeight");
         this.roomDepth = config.getInt("roomDepth");
@@ -57,22 +53,6 @@ public class Client {
 
     public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
-    }
-
-    public boolean isCommentsEnabled() {
-        return commentsEnabled;
-    }
-
-    public void setCommentsEnabled(boolean commentsEnabled) {
-        this.commentsEnabled = commentsEnabled;
-    }
-
-    public int getMaxPosts() {
-        return maxPosts;
-    }
-
-    public void setMaxPosts(int maxPosts) {
-        this.maxPosts = maxPosts;
     }
 
     public int getScreenWidth() {

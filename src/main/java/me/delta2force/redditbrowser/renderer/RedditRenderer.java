@@ -23,6 +23,7 @@ public class RedditRenderer extends MapRenderer{
 	}
 
 	public void setImage(BufferedImage image) {
+		this.drawn = false;
 		this.image = image;
 	}
 
