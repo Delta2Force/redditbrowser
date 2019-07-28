@@ -9,7 +9,7 @@ When the plugin is first launched, a config file for it will be created. In this
 
 Use `/reddit subreddit` in chat e.g. `/reddit awww`.
 
-If you want to join the lobby of another player, type  `/reddit-join playername`.
+WIP: If you want to join the lobby of another player, type  `/reddit-join playername`.
  
 When you are in the room, you can upvote the post by clicking the button left or downvote by clicking the button right.
 You can leave a comment by writing a book using your book and quill and putting it in the comment chest.
