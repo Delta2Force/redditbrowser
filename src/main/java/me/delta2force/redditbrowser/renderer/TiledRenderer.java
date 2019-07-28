@@ -13,7 +13,6 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 public class TiledRenderer {
     private static final int IMAGE_SIZE = 128;
     private static final Pattern PATTERN = Pattern.compile("https://imgur\\.com/(.*)");
@@ -22,6 +21,7 @@ public class TiledRenderer {
     private final RedditBrowserPlugin redditBrowserPlugin;
     private final int tileWidth;
     private final int tileHeight;
+
     public TiledRenderer(
             String url,
             RedditBrowserPlugin redditBrowserPlugin,
@@ -46,11 +46,11 @@ public class TiledRenderer {
         scheduleFindImage();
     }
 
-    void scheduleFindImage() {
+    private void scheduleFindImage() {
         Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, this::findImage);
     }
 
-    void findImage() {
+    private void findImage() {
         try {
             BufferedImage bi = ImageIO.read(new URL(replaceImgUr(url)));
             BufferedImage image = new BufferedImage(IMAGE_SIZE*tileWidth, IMAGE_SIZE*tileHeight, BufferedImage.TYPE_INT_ARGB);

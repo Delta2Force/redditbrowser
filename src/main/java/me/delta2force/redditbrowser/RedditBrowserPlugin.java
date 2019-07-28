@@ -42,10 +42,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
     private Map<UUID, Integer> beforeTPExperience = new HashMap<>();
-    private List<UUID> redditBrowsers = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
 
-    private List<BukkitTask> task = new ArrayList<>();
     public RedditClient redditClient;
     public EventListener listener;
     public final Map<UUID, Room> roomMap = new ConcurrentHashMap<>();
@@ -78,14 +76,7 @@ public class RedditBrowserPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        Iterator<UUID> redditBrowserIterator = redditBrowsers.iterator();
-        while (redditBrowserIterator.hasNext()) {
-            UUID u = redditBrowserIterator.next();
-            Player p = Bukkit.getPlayer(u);
-            kickOut(p);
-        }
         beforeTPLocation.clear();
-        redditBrowsers.clear();
         listener = null;
         roomMap.values().forEach(room -> {
             room.destroy();
