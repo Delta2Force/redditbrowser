@@ -8,8 +8,10 @@ import net.dean.jraw.pagination.DefaultPaginator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RedditQueue {
+    public static final int PAGING_SIZE = 25;
     private RedditClient redditClient;
     private final String subReddit;
     private final List<String> history;
@@ -32,14 +34,14 @@ public class RedditQueue {
         if("FRONTPAGE".equalsIgnoreCase(subReddit)) {
             defaultPaginator = redditClient
                     .frontPage()
-                    .limit(1)
+                    .limit(PAGING_SIZE)
                     .build();
         } else {
             defaultPaginator = redditClient
                     .subreddit(subReddit)
                     .posts()
                     .sorting(SubredditSort.HOT)
-                    .limit(1)
+                    .limit(PAGING_SIZE)
                     .build();
         }
 
@@ -48,16 +50,10 @@ public class RedditQueue {
 
     Submission next() {
         if (index + 1 >= history.size()) {
-            try {
-                final Submission submission = getNext();
-                if(submission == null) {
-                    return null;
-                }
-                history.add(submission.getId());
-                index++;
-                return submission;
-            } catch (Exception exception) {
-                //Just let the service return null
+            if(loadNextPage()) {
+                return next();
+            } else {
+                return null;
             }
         } else {
             final String submissionId = history.get(index + 1);
@@ -65,19 +61,20 @@ public class RedditQueue {
             index++;
             return submission;
         }
-
-        return null;
     }
 
-    private Submission getNext() {
+    private boolean loadNextPage() {
         final Listing<Submission> next = defaultPaginator.next();
         if (next != null) {
             final List<Submission> children = next.getChildren();
             if (children != null && !children.isEmpty()) {
-                return children.get(0);
+                history.addAll(children.stream()
+                        .map(Submission::getId)
+                        .collect(Collectors.toList()));
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
     Submission previous() {
