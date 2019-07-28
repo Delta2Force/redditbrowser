@@ -194,8 +194,11 @@ public class Room {
     }
 
     private void buildSubredditHologram(Submission submission) {
+        final int height = roomDimensions.getRoomHeight() > 4 ? -(roomDimensions.getRoomHeight() / 2) : -1;
         spawnHologram(location.clone()
-                .add(-(roomDimensions.getRoomWidth()/2),-(roomDimensions.getRoomHeight()/2),-(roomDimensions.getRoomDepth()/2))
+                .add(-(roomDimensions.getRoomWidth()/2),
+                        height,
+                        -(roomDimensions.getRoomDepth()/2))
                 .clone().add(.5, -2, .5), colorCode("a") + "r/" + submission.getSubreddit());
     }
 
@@ -410,8 +413,8 @@ public class Room {
 
     private void buildNavigationButton() {
         int zPosition = (-roomDimensions.getRoomDepth() / 2) + 1;
-        if (zPosition >= 0) {
-            zPosition = -1;
+        if (zPosition > -2) {
+            zPosition = -2;
         }
 
         Block nextButton = location.getWorld().getBlockAt(location.clone().add(-1, -roomDimensions.getRoomHeight() + 2, zPosition));
