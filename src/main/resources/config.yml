@@ -2,3 +2,6 @@ username: "exampleUsername"
 password: "examplePassword"
 clientId: "exampleClientId"
 clientSecret: "exampleClientSecret"
+screenWidth: 5
+screenHeight: 5
+roomDepth: 8

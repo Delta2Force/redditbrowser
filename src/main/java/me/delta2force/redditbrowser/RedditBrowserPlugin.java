@@ -1,79 +1,52 @@
 package me.delta2force.redditbrowser;
 
+import com.google.gson.Gson;
 import me.delta2force.redditbrowser.generator.RedditGenerator;
-import me.delta2force.redditbrowser.interaction.InteractiveEnum;
-import me.delta2force.redditbrowser.interaction.InteractiveLocation;
 import me.delta2force.redditbrowser.inventory.RedditInventory;
 import me.delta2force.redditbrowser.listeners.EventListener;
-import me.delta2force.redditbrowser.renderer.RedditRenderer;
+import me.delta2force.redditbrowser.room.Room;
+import me.delta2force.redditbrowser.room.RoomDimensions;
 import net.dean.jraw.RedditClient;
 import net.dean.jraw.http.OkHttpNetworkAdapter;
 import net.dean.jraw.http.UserAgent;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.models.KarmaBySubreddit;
-import net.dean.jraw.models.Submission;
-import net.dean.jraw.models.SubredditSort;
 import net.dean.jraw.oauth.Credentials;
 import net.dean.jraw.oauth.OAuthHelper;
-import net.dean.jraw.pagination.Stream;
 import net.dean.jraw.tree.CommentNode;
-import net.dean.jraw.tree.RootCommentNode;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.GameRule;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.WorldCreator;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.Chest;
-import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.type.Ladder;
+import org.apache.commons.lang.StringUtils;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
-
-import com.google.gson.Gson;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static me.delta2force.redditbrowser.room.Room.COMMENT_DISPLAY_NAME;
 
 public class RedditBrowserPlugin extends JavaPlugin {
+    public static final String SUBMISSION_ID = "submissionId";
+    public static final String INTERACTIVE_ENUM = "interactiveEnum";
+    public static final String BUTTON_ACTIVATED = "buttonActivated";
+    public static final String ROOM_ID = "redditRoomId";
 
     private Map<UUID, Location> beforeTPLocation = new HashMap<>();
-    private Map<UUID, RedditInventory> beforeTPInventory = new HashMap<>();
     private Map<UUID, Integer> beforeTPExperience = new HashMap<>();
-    private List<UUID> redditBrowsers = new ArrayList<>();
-    public Map<InteractiveLocation, InteractiveEnum> interactiveSubmissionID = new HashMap<>();
-    public ArrayList<Runnable> runnableQueue = new ArrayList<>();
     public Map<String, CommentNode<Comment>> commentCache = new HashMap<>();
-    public Map<String, ArmorStand> submissionArmorStands = new HashMap<>();
-    
-    private List<BukkitTask> task = new ArrayList<>();
-    public RedditClient reddit;
+
+    public RedditClient redditClient;
     public EventListener listener;
+    public final Map<UUID, Room> roomMap = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -82,327 +55,212 @@ public class RedditBrowserPlugin extends JavaPlugin {
         listener = new EventListener(this);
         Bukkit.getServer().getPluginManager().registerEvents(listener, this);
         try {
-			checkLatestVersion();
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+            checkLatestVersion();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    
+
     public void checkLatestVersion() throws MalformedURLException, IOException {
-    	Gson g = new Gson();
-    	InputStream stream = new URL("https://api.github.com/repos/Delta2Force/redditbrowser/releases/latest").openStream();
-    	InputStreamReader reader = new InputStreamReader(stream);
-    	GithubAPIResponse gar = g.fromJson(reader, GithubAPIResponse.class);
-    	reader.close();
-    	stream.close();
-    	
-    	if(!this.getDescription().getVersion().contains(gar.tag_name)) {
-    		this.getServer().broadcastMessage(ChatColor.LIGHT_PURPLE + "Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
-    	}
+        Gson g = new Gson();
+        InputStream stream = new URL("https://api.github.com/repos/Delta2Force/redditbrowser/releases/latest").openStream();
+        InputStreamReader reader = new InputStreamReader(stream);
+        GithubAPIResponse gar = g.fromJson(reader, GithubAPIResponse.class);
+        reader.close();
+        stream.close();
+
+        if (!this.getDescription().getVersion().contains(gar.tag_name)) {
+            this.getServer().broadcastMessage(ChatColor.LIGHT_PURPLE + "Your version of RedditBrowser is outdated! The newest version is: " + gar.tag_name + ". You can download it from: " + gar.html_url);
+        }
     }
 
     @Override
     public void onDisable() {
-    	Iterator<UUID> redditBrowserIterator = redditBrowsers.iterator();
-        while(redditBrowserIterator.hasNext()) {
-        	UUID u = redditBrowserIterator.next();
-            Player p = Bukkit.getPlayer(u);
-            kickOut(p);
-        }
         beforeTPLocation.clear();
-        beforeTPInventory.clear();
-        redditBrowsers.clear();
         listener = null;
+        roomMap.values().forEach(room -> {
+            room.destroy();
+            roomMap.remove(room.getRoomId());
+        });
     }
 
     public void attemptConnect() {
-        Client client = new Client(this);
+        Client client = getClient();
         Credentials oauthCreds = Credentials.script(client.getUsername(), client.getPassword(), client.getClientId(), client.getClientSecret());
         UserAgent userAgent = new UserAgent("bot", "reddit.minecraft.browser", this.getDescription().getVersion(), client.getUsername());
-        reddit = OAuthHelper.automatic(new OkHttpNetworkAdapter(userAgent), oauthCreds);
+        redditClient = OAuthHelper.automatic(new OkHttpNetworkAdapter(userAgent), oauthCreds);
+        redditClient.setAutoRenew(true);
+    }
+
+    private Client getClient() {
+        return new Client(this);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
-            Player p = (Player) sender;
+            Player player = (Player) sender;
             if (command.getName().equals("reddit")) {
-                if (reddit == null) {
-                    attemptConnect();
-                }
-                if (redditBrowsers.contains(p.getUniqueId())) {
-                    kickOut(p);
+                if (args != null && args.length > 0 && StringUtils.isNotBlank(args[0])) {
+                    final Room playerRoom = roomMap.getOrDefault(player.getUniqueId(), null);
+                    if (playerRoom == null) {
+                        if (redditClient == null) {
+                            attemptConnect();
+                        }
+                        storePreLocation(player);
+                        setupReddit(player);
+                        buildRoom(player, args[0]);
+                    } else {
+                        playerRoom.updateSubreddit(args[0]);
+                    }
                 } else {
-                    beforeTPLocation.put(p.getUniqueId(), p.getLocation());
-                    beforeTPInventory.put(p.getUniqueId(), new RedditInventory(p.getInventory()));
-                    redditBrowsers.add(p.getUniqueId());
-                    beforeTPExperience.put(p.getUniqueId(), p.getTotalExperience());
-                    p.getInventory().clear();
-                    setupReddit(p);
+                    player.sendMessage("Please provide a subreddit.");
+                }
+            } else if ("reddit-join".equalsIgnoreCase(command.getName())) {
+                if (args != null && args.length > 0 && StringUtils.isNotBlank(args[0])) {
+                    String possiblePlayerName = args[0];
+                    Player targetPlayer = this.getServer().getPlayer(possiblePlayerName);
+                    if (targetPlayer != null) {
+                        if (!Objects.equals(targetPlayer.getUniqueId(), player.getUniqueId())) {
+                            if (roomMap.containsKey(targetPlayer.getUniqueId())) {
+                                storePreLocation(player);
+                                setupReddit(player);
+                                final Room room = roomMap.get(targetPlayer.getUniqueId());
+                                room.addPlayer(player);
+                            } else {
+                                sender.sendMessage("Player " + args[0] + " is not owner of a reddit room!");
+                            }
+                        } else {
+                            sender.sendMessage("You cannot join yourself");
+                        }
+                    } else {
+                        sender.sendMessage("Player " + args[0] + " does not exist!");
+                    }
                 }
             }
         }
         return true;
     }
 
-    public void setupReddit(Player p) {
-        p.sendMessage(ChatColor.YELLOW + "Please wait while I setup Reddit...");
+    private void storePreLocation(Player player) {
+        beforeTPLocation.put(player.getUniqueId(), player.getLocation());
+        beforeTPExperience.put(player.getUniqueId(), player.getTotalExperience());
+    }
+
+    public void setupReddit(Player player) {
+        player.sendMessage(ChatColor.YELLOW + "Please wait while I setup Reddit...");
+        setKarma(player);
+
+        Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
+            @Override
+            public void run() {
+                setKarma(player);
+            }
+        });
+    }
+
+    public static String colorCode(String color) {
+        return (char) (0xfeff00a7) + color;
+    }
+
+    public void setKarma(Player p) {
+        p.setTotalExperience(0);
+        int karma = 0;
+        for (KarmaBySubreddit kbs : redditClient.me().karma()) {
+            karma += kbs.getLinkKarma();
+            karma += kbs.getCommentKarma();
+        }
+        p.setLevel(karma);
+    }
+
+    private World createWorld() {
         WorldCreator wc = new WorldCreator("reddit");
         wc.generator(new RedditGenerator());
         wc.generateStructures(false);
-        World w = Bukkit.createWorld(wc);
-        w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-        w.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
-        w.setTime(1400);
+        World world = Bukkit.createWorld(wc);
+        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
+        world.setTime(1400);
+        return world;
+    }
+
+    public void buildRoom(Player player, String subReddit) {
+        Client client = getClient();
+        World world = createWorld();
+        RoomDimensions roomDimensions = createRoomDimensions(client);
         Random r = new Random();
-        Location l = new Location(w, r.nextInt(2000000) - 1000000, 30, r.nextInt(2000000) - 1000000);
-        int fx = l.getBlockX() - 11;
-        int fz = l.getBlockZ() - 1;
-        int tx = l.getBlockX() + 11;
-        int tz = l.getBlockZ() + 10;
-        for (int x = fx; x < tx; x++) {
-            for (int z = fz; z < tz; z++) {
-                new Location(w, x, 30, z).getBlock().setType(Material.POLISHED_ANDESITE);
-            }
-        }
-        p.teleport(l.clone().add(0, 1, 0));
-        p.getInventory().addItem(new ItemStack(Material.OAK_SIGN, 16));
-        p.sendMessage(ChatColor.GREEN + "There you go!");
+        Location location = new Location(world, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
+
+        Bukkit.getScheduler().runTaskAsynchronously(this, task -> {
+            final Room room = new Room(
+                    this,
+                    location,
+                    subReddit,
+                    roomDimensions,
+                    player);
+            roomMap.put(room.getRoomId(), room);
+            room.build(Collections.singletonList(player));
+        });
     }
 
-    public ArmorStand spawnHologram(Location l, String name) {
-        ArmorStand as = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
-        as.setCustomName(name);
-        as.setCustomNameVisible(true);
-        as.setGravity(false);
-        as.setVisible(false);
-        as.setInvulnerable(true);
-        as.setCollidable(false);
-        return as;
+
+    @NotNull
+    private RoomDimensions createRoomDimensions(Client client) {
+        int screenWidth = client.getScreenWidth();
+        if (screenWidth < 1) {
+            screenWidth = 1;
+        }
+        int screenHeight = client.getScreenHeight();
+        if (screenHeight < 1) {
+            screenHeight = 1;
+        }
+        int roomDepth = client.getRoomDepth();
+        if (roomDepth < 5) {
+            roomDepth = 5;
+        }
+        int roomHeight = screenHeight > 1 ? screenHeight + 3 : screenHeight + 3;
+        int roomWidth = screenWidth >= 3 ? screenWidth + 3 : screenWidth + 2;
+        if (roomWidth < 5) {
+            roomWidth = 5;
+        }
+        return new RoomDimensions(
+                roomWidth,
+                roomHeight,
+                roomDepth,
+                screenWidth,
+                screenHeight
+        );
     }
-    
-    public String colorCode(String color) {
-    	return (char) (0xfeff00a7) + color;
-    }
-    
-    public void setRoom(Location l, String submissionId) {
-        Submission s = reddit.submission(submissionId).inspect();
-        RootCommentNode rcn = reddit.submission(submissionId).comments();
-        cube(Material.POLISHED_ANDESITE, l, l.clone().add(-4, -4, -4));
-        cube(Material.AIR, l.clone().add(-1, -1, -1), l.clone().add(-3, -3, -3));
 
-        for (int y = l.getBlockY(); y > l.getBlockY() - 4; y--) {
-            Block block = new Location(l.getWorld(), l.getBlockX() - 2, y, l.getBlockZ() - 1).getBlock();
-            block.setType(Material.LADDER);
-            Ladder ladder = (Ladder) block.getBlockData();
-            ladder.setFacing(BlockFace.NORTH);
-            block.setBlockData(ladder);
-            block.getState().update();
-        }
+    public void kickOut(Player player) {
+        player.sendMessage(ChatColor.GREEN + "Goodbye reddit!");
+        final UUID uniqueId = player.getUniqueId();
+        player.teleport(beforeTPLocation.get(uniqueId));
+        removeCommentsFromPlayerInventory(player);
+        player.setTotalExperience(beforeTPExperience.get(uniqueId));
 
-        Block b = l.clone().add(-2, -3, -3).getBlock();
-        b.setType(Material.CHEST);
-        
-        interactiveSubmissionID.put(new InteractiveLocation(b.getLocation(), s.getId()), InteractiveEnum.COMMENT_CHEST);
-        
-        Chest chest = (Chest) b.getState();
+        beforeTPLocation.remove(uniqueId);
+        beforeTPExperience.remove(uniqueId);
 
-        Location bl = b.getLocation();
-        String title = s.getTitle();
-        if (title.length() > 15) {
-            spawnHologram(bl.clone().add(.5, .5, .5), title.substring(0, 15));
-            if (title.length() > 30) {
-                spawnHologram(bl.clone().add(.5, .25, .5), title.substring(15, 30));
-                if (title.length() > 45) {
-                    spawnHologram(bl.clone().add(.5, 0, .5), title.substring(30, 45));
-                } else {
-                    spawnHologram(bl.clone().add(.5, 0, .5), title.substring(30));
-                }
-            } else {
-                spawnHologram(bl.clone().add(.5, .25, .5), title.substring(15));
-            }
-        } else {
-            spawnHologram(bl.clone().add(.5, .5, .5), title);
-        }
-
-        submissionArmorStands.put(s.getId(), spawnHologram(bl.clone().add(.5, -.25, .5), colorCode("6") + s.getScore()));
-
-        l.getWorld().getBlockAt(l.clone().add(-2, -2, -2)).setType(Material.POLISHED_ANDESITE);
-
-        ItemFrame itf = (ItemFrame) l.getWorld().spawnEntity(l.clone().add(-2, -2, -3), EntityType.ITEM_FRAME);
-        itf.setFacingDirection(BlockFace.SOUTH);
-        
-        Block uv = l.getWorld().getBlockAt(l.clone().add(-3, -2, -3));
-        uv.setType(Material.OAK_BUTTON);
-        Directional uvdir = (Directional) uv.getBlockData();
-        uvdir.setFacing(BlockFace.SOUTH);
-        uv.setBlockData(uvdir);
-        interactiveSubmissionID.put(new InteractiveLocation(uv.getLocation(), s.getId()), InteractiveEnum.UPVOTE);
-        
-        Block dv = l.getWorld().getBlockAt(l.clone().add(-1, -2, -3));
-        dv.setType(Material.OAK_BUTTON);
-        Directional dvdir = (Directional) dv.getBlockData();
-        dvdir.setFacing(BlockFace.SOUTH);
-        dv.setBlockData(dvdir);
-        interactiveSubmissionID.put(new InteractiveLocation(dv.getLocation(), s.getId()), InteractiveEnum.DOWNVOTE);
-        
-        spawnHologram(uv.getLocation().clone().add(.5, -2, .5), colorCode("a")+"+1");
-        spawnHologram(dv.getLocation().clone().add(.5, -2, .5), colorCode("c")+"-1");
-        
-        if (s.isSelfPost()) {
-            ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-            BookMeta bookmeta = (BookMeta) book.getItemMeta();
-            bookmeta.setTitle(s.getTitle());
-            bookmeta.setAuthor(s.getAuthor());
-            if (s.getSelfText().length() > 255) {
-                double f = Math.ceil(((float) s.getSelfText().length()) / 255f);
-                for (int i = 0; i < f; i++) {
-                    if (s.getSelfText().length() < (i + 1) * 255) {
-                        bookmeta.addPage(s.getSelfText().substring(i * 255, s.getSelfText().length()));
-                    } else {
-                        bookmeta.addPage(s.getSelfText().substring(i * 255, (i + 1) * 255));
-                    }
-                }
-            } else {
-                bookmeta.addPage(s.getSelfText());
-            }
-            book.setItemMeta(bookmeta);
-            itf.setItem(book);
-        } else {
-            ItemStack map = new ItemStack(Material.FILLED_MAP);
-            MapMeta mapMeta = (MapMeta) map.getItemMeta();
-            MapView mv = Bukkit.createMap(l.getWorld());
-            mv.addRenderer(new RedditRenderer(s.getUrl(), this));
-            mapMeta.setMapView(mv);
-            map.setItemMeta(mapMeta);
-            itf.setItem(map);
-        }
-
-        l.clone().add(-2, -2, -2).getBlock().setType(Material.AIR);
-        
-        chest.setCustomName(UUID.randomUUID().toString());
-        
-        int in = 0;
-        for (CommentNode<Comment> cn : rcn.getReplies()) {
-            Comment c = cn.getSubject();
-            if (in < 26) {
-                ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-                BookMeta bookmeta = (BookMeta) book.getItemMeta();
-                bookmeta.setTitle("Comment");
-                bookmeta.setAuthor("u/"+c.getAuthor());
-                if (c.getBody().length() > 255) {
-                    double f = Math.ceil(((float) c.getBody().length()) / 255f);
-                    for (int i = 0; i < f; i++) {
-                        if (c.getBody().length() < (i + 1) * 255) {
-                            bookmeta.addPage(c.getBody().substring(i * 255));
-                        } else {
-                            bookmeta.addPage(c.getBody().substring(i * 255, (i + 1) * 255));
-                        }
-                    }
-                } else {
-                    bookmeta.addPage(c.getBody());
-                }
-                bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
-                book.setItemMeta(bookmeta);
-                commentCache.put(c.getId(), cn);
-                chest.getInventory().addItem(book);
-            } else {
-                break;
-            }
-            in++;
+        if (roomMap.containsKey(uniqueId)) {
+            final Room room = roomMap.get(uniqueId);
+            room.destroy();
+            roomMap.remove(uniqueId);
         }
     }
 
-    public void cube(Material blockMaterial, Location from, Location to) {
-        for (int x = from.getBlockX(); x >= to.getBlockX(); x--) {
-            for (int y = from.getBlockY(); y >= to.getBlockY(); y--) {
-                for (int z = from.getBlockZ(); z >= to.getBlockZ(); z--) {
-                    from.getWorld().getBlockAt(x, y, z).setType(blockMaterial);
-                }
-            }
-        }
-    }
-    
-    public void setKarma(Player p) {
-    	p.setTotalExperience(0);
-    	int karma = 0;
-    	for(KarmaBySubreddit kbs : reddit.me().karma()) {
-    		karma += kbs.getLinkKarma();
-    		karma += kbs.getCommentKarma();
-    	}
-    	p.setLevel(karma);
-    }
-    
-    public void createTowerAndTP(Player p, String sub, World w) {
-        Random r = new Random();
-        Location l = new Location(w, r.nextInt(2000000) - 1000000, 255, r.nextInt(2000000) - 1000000);
-        Stream<Submission> ll = reddit.subreddit(sub).posts().sorting(SubredditSort.HOT).build().stream();
-        int i = 0;
-        while (i < 27) {
-            Submission s = ll.next();
-            final int index = i;
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                setRoom(l.clone().add(0, -4 * index, 0), s.getId());
-                p.sendMessage(""+ChatColor.DARK_GREEN + (index+1) + " / 27 posts built");
-                if(index == 24) {
-                	p.teleport(l.clone().add(0, 4, 0));
-                    p.setGameMode(GameMode.SURVIVAL);
-                    p.getInventory().clear();
-                	p.getInventory().addItem(new ItemStack(Material.WRITABLE_BOOK));
-                	setKarma(p);
-                }
-            }, 0);
-            i++;
-            p.sendMessage(""+ChatColor.GREEN + i + " / 27 posts loaded");
-            if (i > 25) {
-            	for(Runnable t : runnableQueue) {
-                	Bukkit.getScheduler().runTaskAsynchronously(this, t);
-            	}
-            	runnableQueue.clear();
-                BukkitTask bt = task.get(0);
-                task.remove(0);
-                bt.cancel();
-            }
+    public static void removeCommentsFromPlayerInventory(Player player) {
+        for (ItemStack item : player.getInventory().getContents())
+        {
             try {
-                Thread.sleep(1500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+                if (Material.WRITABLE_BOOK.equals(item.getType()) ||
+                        Material.WRITTEN_BOOK.equals(item.getType())) {
+                    if(Objects.equals(COMMENT_DISPLAY_NAME, item.getItemMeta().getDisplayName())) {
+                        item.setAmount(0);
+                    }
+                }
+            } catch (Exception e) {}
         }
-    }
-	
-    public Location roundedLocation(Location loc) {
-        return new Location(loc.getWorld(), (int) loc.getX(), (int) loc.getY(), (int) loc.getZ());
-    }
-
-    public void kickOut(Player p) {
-        p.sendMessage(ChatColor.GREEN + "Goodbye reddit!");
-        p.teleport(beforeTPLocation.get(p.getUniqueId()));
-        p.getInventory().clear();
-        p.setTotalExperience(beforeTPExperience.get(p.getUniqueId()));
-        RedditInventory beforeTP = beforeTPInventory.get(p.getUniqueId());
-        beforeTP.apply(p);
-        redditBrowsers.remove(p.getUniqueId());
-        beforeTPLocation.remove(p.getUniqueId());
-        beforeTPInventory.remove(p.getUniqueId());
-        beforeTPExperience.remove(p.getUniqueId());
-    }
-
-    public Map<UUID, Location> getBeforeTPLocation() {
-        return beforeTPLocation;
-    }
-
-    public Map<UUID, RedditInventory> getBeforeTPInventory() {
-        return beforeTPInventory;
-    }
-
-    public List<UUID> getRedditBrowsers() {
-        return redditBrowsers;
-    }
-
-    public List<BukkitTask> getTask() {
-        return task;
     }
 }

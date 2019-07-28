@@ -8,6 +8,9 @@ public class Client {
     private String password;
     private String clientId;
     private String clientSecret;
+    private int screenWidth;
+    private int screenHeight;
+    private int roomDepth;
 
     public Client(RedditBrowserPlugin reddit) {
         FileConfiguration config = reddit.getConfig();
@@ -15,6 +18,9 @@ public class Client {
         this.password = config.getString("password");
         this.clientId = config.getString("clientId");
         this.clientSecret = config.getString("clientSecret");
+        this.screenWidth = config.getInt("screenWidth");
+        this.screenHeight = config.getInt("screenHeight");
+        this.roomDepth = config.getInt("roomDepth");
     }
 
     public String getUsername() {
@@ -47,5 +53,29 @@ public class Client {
 
     public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    public int getScreenWidth() {
+        return screenWidth;
+    }
+
+    public void setScreenWidth(int screenWidth) {
+        this.screenWidth = screenWidth;
+    }
+
+    public int getScreenHeight() {
+        return screenHeight;
+    }
+
+    public void setScreenHeight(int screenHeight) {
+        this.screenHeight = screenHeight;
+    }
+
+    public int getRoomDepth() {
+        return roomDepth;
+    }
+
+    public void setRoomDepth(int roomDepth) {
+        this.roomDepth = roomDepth;
     }
 }

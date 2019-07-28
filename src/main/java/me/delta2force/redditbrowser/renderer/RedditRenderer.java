@@ -17,34 +17,24 @@ import me.delta2force.redditbrowser.RedditBrowserPlugin;
 public class RedditRenderer extends MapRenderer{
 	public BufferedImage image;
 	public String url;
-	
-	public RedditRenderer(final String url, RedditBrowserPlugin reddit) {
-		this.url=url;
-		reddit.runnableQueue.add(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					BufferedImage bi = ImageIO.read(new URL(url));
-					image = new BufferedImage(128, 128, BufferedImage.TYPE_INT_ARGB);
-					image.createGraphics().drawImage(bi, 0, 0, 128, 128, null);
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			@Override
-			public String toString() {
-				return url;
-			}
-		});
+	private boolean drawn;
+	public RedditRenderer(String url) {
+		this.url = url;
 	}
-	
+
+	public void setImage(BufferedImage image) {
+		this.drawn = false;
+		this.image = image;
+	}
+
 	@Override
 	public void render(MapView mv, MapCanvas mc, Player p) {
 		if(image != null) {
-			mc.drawImage(0, 0, image);
+			if(!drawn) { //Don't redraw every time because the server calls this too much
+				//this will need to track for which player it was drawn I guess
+				mc.drawImage(0, 0, image);
+				drawn = true;
+			}
 		}
 	}
 }
