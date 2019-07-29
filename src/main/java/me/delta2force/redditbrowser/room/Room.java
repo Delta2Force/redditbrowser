@@ -2,8 +2,6 @@ package me.delta2force.redditbrowser.room;
 
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
-import me.delta2force.redditbrowser.renderer.TiledRenderer;
-import me.delta2force.redditbrowser.repository.URLToImageRepository;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.models.Submission;
 import net.dean.jraw.tree.CommentNode;
@@ -17,11 +15,8 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapView;
 import org.bukkit.metadata.FixedMetadataValue;
 
-import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -43,7 +38,7 @@ public class Room {
     private RedditQueue redditQueue;
     private String subreddit;
     private Submission currentSubmission;
-    private TiledRenderer tiledRenderer;
+    private final Screen screen;
 
     public Room(
             RedditBrowserPlugin redditBrowserPlugin,
@@ -55,11 +50,19 @@ public class Room {
         this.owner = owner;
         this.location = location;
         this.roomDimensions = roomDimensions;
+        final Location screenLocation = location.clone().add(
+                -roomDimensions.getRoomWidth() + 2,
+                -2,
+                -roomDimensions.getRoomDepth());
+        this.screen = new Screen(
+                this,
+                screenLocation,
+                roomDimensions.getScreenWidth(),
+                roomDimensions.getScreenHeight());
         setSubReddit(subreddit);
     }
 
     public void build(Collection<Player> startingPlayers) {
-        tiledRenderer = null;
         Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
             final Submission submission = redditQueue.next();
             if (submission != null) {
@@ -90,6 +93,7 @@ public class Room {
 
     public void refresh() {
         redditQueue.reset();
+        screen.clean();
         build(getPlayers());
     }
 
@@ -111,8 +115,8 @@ public class Room {
         location.clone().add(-roomDimensions.getRoomWidth(), -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth()).getChunk().load();
         startingPlayers.forEach(player -> {
             // If it's pewds' subreddit, display LWIAY title
-            if(subreddit.equalsIgnoreCase("pewdiepiesubmissions")) {
-                player.sendTitle(colorCode("4")+"L"+colorCode("a")+"W"+colorCode("1")+"I"+colorCode("d")+"A"+colorCode("e")+"Y", "", 10, 70, 20);
+            if (subreddit.equalsIgnoreCase("pewdiepiesubmissions")) {
+                player.sendTitle(colorCode("4") + "L" + colorCode("a") + "W" + colorCode("1") + "I" + colorCode("d") + "A" + colorCode("e") + "Y", "", 10, 70, 20);
             }
             player.teleport(loc);
             player.setGameMode(GameMode.SURVIVAL);
@@ -201,6 +205,7 @@ public class Room {
         emptyCommentsChest();
         buildLeaveButton();
         removeNewCommentsButton();
+        screen.buildScreen(submission);
         if (submission != null) {
             buildNavigationButton();
             buildVoteButtons(submission);
@@ -208,19 +213,8 @@ public class Room {
             buildRefreshButton();
             buildLeaveButton();
             buildSubredditHologram(submission);
-            if (submission.isSelfPost()) {
-                buildSelfPost(submission);
-            } else {
-                try {
-                    buildTiledMapView(submission);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        } else {
-            cleanBackWall();
+            realignItemFrames();
         }
-        realignItemFrames();
     }
 
     private void realignItemFrames() {
@@ -414,42 +408,7 @@ public class Room {
         spawnHologram(dv.getLocation().clone().add(.5, -2, .5), colorCode("c") + "-1");
     }
 
-    private void buildSelfPost(Submission submission) {
-        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-        BookMeta bookmeta = (BookMeta) book.getItemMeta();
-        bookmeta.setTitle(submission.getTitle());
-        bookmeta.setDisplayName(COMMENT_DISPLAY_NAME);
-        bookmeta.setAuthor(submission.getAuthor());
-        if (submission.getSelfText().length() > 255) {
-            double f = ceil(((float) submission.getSelfText().length()) / 255f);
-            for (int i = 0; i < f; i++) {
-                if (submission.getSelfText().length() < (i + 1) * 255) {
-                    bookmeta.addPage(submission.getSelfText().substring(i * 255));
-                } else {
-                    bookmeta.addPage(submission.getSelfText().substring(i * 255, (i + 1) * 255));
-                }
-            }
-        } else {
-            bookmeta.addPage(submission.getSelfText());
-        }
 
-        cleanBackWall();
-        tiledRenderer = null;
-        Bukkit.getScheduler().runTaskLater(redditBrowserPlugin, new Runnable() {
-
-            @Override
-            public void run() {
-                location.clone().add(-(roomDimensions.getRoomWidth() / 2), -roomDimensions.getRoomHeight() + 2, -roomDimensions.getRoomDepth())
-                        .getBlock().setType(Material.GLOWSTONE);
-                ItemFrame itf = (ItemFrame) location.getWorld().spawnEntity(location.clone().add(-(roomDimensions.getRoomWidth() / 2), -roomDimensions.getRoomHeight() + 2, -roomDimensions.getRoomDepth() + 1), EntityType.ITEM_FRAME);
-                itf.setFacingDirection(BlockFace.SOUTH);
-
-                book.setItemMeta(bookmeta);
-                itf.setItem(book);
-            }
-        }, 5);
-
-    }
 
     private void buildNavigationButton() {
         int zPosition = (-roomDimensions.getRoomDepth() / 2) + 1;
@@ -494,7 +453,7 @@ public class Room {
                 .forEach(Entity::remove);
     }
 
-    private void removeHologramByType(Location location, EntityType entityType) {
+    void removeHologramByType(Location location, EntityType entityType) {
         location.getWorld()
                 .getNearbyEntities(location,
                         -roomDimensions.getRoomWidth(),
@@ -502,68 +461,6 @@ public class Room {
                         -roomDimensions.getRoomDepth(),
                         o -> Objects.equals(entityType, o.getType()))
                 .forEach(Entity::remove);
-    }
-
-    private void cleanBackWall() {
-        clearItemFrames();
-
-        int screenWidth = roomDimensions.getScreenWidth();
-        int screenHeight = roomDimensions.getScreenHeight();
-
-        int titleXStart = (screenWidth + 1) * -1;
-        int titleYStart = roomDimensions.getScreenHeight() - roomDimensions.getRoomHeight() + 1;
-        for (int row = 0; row < screenHeight; row++) {
-            for (int col = 0; col < screenWidth; col++) {
-                location.clone().add(titleXStart + col, titleYStart - row, -roomDimensions.getRoomDepth()).getBlock().setType(ROOM_MATERIAL);
-            }
-        }
-    }
-
-    private void buildTiledMapView(Submission submission) {
-        final World world = location.getWorld();
-
-        int screenWidth = roomDimensions.getScreenWidth();
-        int screenHeight = roomDimensions.getScreenHeight();
-
-        int titleXStart = (screenWidth + 1) * -1;
-        int titleYStart = roomDimensions.getScreenHeight() - roomDimensions.getRoomHeight() + 1;
-        if (tiledRenderer == null) {
-            cleanBackWall();
-            tiledRenderer = new TiledRenderer(redditBrowserPlugin, screenWidth, screenHeight);
-            Bukkit.getScheduler().runTaskLater(redditBrowserPlugin, () -> {
-                for (int row = 0; row < screenHeight; row++) {
-                    for (int col = 0; col < screenWidth; col++) {
-                        location.clone().add(titleXStart + col, titleYStart - row, -roomDimensions.getRoomDepth()).getBlock().setType(Material.GLOWSTONE);
-                        ItemFrame itf = (ItemFrame) world.spawnEntity(location.clone().add(titleXStart + col, titleYStart - row, -roomDimensions.getRoomDepth() + 1), EntityType.ITEM_FRAME);
-                        itf.setFacingDirection(BlockFace.SOUTH);
-                        itf.setInvulnerable(true);
-                        itf.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, getRoomId()));
-                        itf.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.SHOW_URL));
-                        itf.setRotation(Rotation.NONE);
-                        ItemStack map = new ItemStack(Material.FILLED_MAP);
-                        MapMeta mapMeta = (MapMeta) map.getItemMeta();
-                        MapView mapView = Bukkit.createMap(world);
-                        mapView.setTrackingPosition(false);
-                        mapView.setLocked(true);
-                        mapView.setUnlimitedTracking(false);
-                        mapView.getRenderers().forEach(mapView::removeRenderer);
-                        mapView.addRenderer(tiledRenderer.getRenderer(row, col));
-                        mapMeta.setMapView(mapView);
-                        map.setItemMeta(mapMeta);
-                        itf.setItem(map);
-                    }
-                }
-
-            }, 5);
-        }
-        Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
-            final BufferedImage image = URLToImageRepository.findImage(submission);
-            tiledRenderer.updateImage(submission.getUrl(), image);
-        });
-    }
-
-    private void clearItemFrames() {
-        removeHologramByType(location, EntityType.ITEM_FRAME);
     }
 
     private void cube(Material blockMaterial, Location from, Location to) {
@@ -654,8 +551,16 @@ public class Room {
     }
 
     public void showURLtoPlayers(Player player) {
-        if(currentSubmission != null) {
+        if (currentSubmission != null) {
             player.sendMessage(ChatColor.YELLOW + "Image/Video link: " + ChatColor.BLUE + ChatColor.UNDERLINE + currentSubmission.getUrl());
         }
+    }
+
+    public Material getRoomMaterial() {
+        return ROOM_MATERIAL;
+    }
+
+    public RedditBrowserPlugin getRedditBrowserPlugin() {
+        return redditBrowserPlugin;
     }
 }
