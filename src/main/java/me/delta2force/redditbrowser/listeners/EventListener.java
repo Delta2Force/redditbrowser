@@ -18,8 +18,10 @@ import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -49,10 +51,10 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void interact(PlayerInteractEvent event) {
-        //redditClient.setKarma(event.getPlayer()); Overloading the server
-        if (event.getClickedBlock() != null && event.getClickedBlock().hasMetadata(RedditBrowserPlugin.INTERACTIVE_ENUM)) {
+        if (event.getClickedBlock() != null
+                && Action.RIGHT_CLICK_BLOCK.equals(event.getAction())
+                && event.getClickedBlock().hasMetadata(RedditBrowserPlugin.INTERACTIVE_ENUM)) {
             List<MetadataValue> metadata = event.getClickedBlock().getMetadata(RedditBrowserPlugin.INTERACTIVE_ENUM);
-
             if (metadataContains(metadata, InteractiveEnum.UPVOTE)) {
                 String submissionID = event.getClickedBlock().getMetadata(RedditBrowserPlugin.SUBMISSION_ID).get(0).asString();
                 Bukkit.getScheduler().runTaskAsynchronously(reddit, new Runnable() {
@@ -130,6 +132,15 @@ public class EventListener implements Listener {
                     final ItemStack writableBookStack = createWritableBookStack();
                     event.getPlayer().getInventory().setItemInMainHand(writableBookStack);
                 }
+            } else if (metadataContains(metadata, InteractiveEnum.SHOW_URL)) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId)) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    room.showURLtoPlayers(event.getPlayer());
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+                event.setCancelled(true);
             }
         }
     }
@@ -185,29 +196,6 @@ public class EventListener implements Listener {
         }
     }
 
-    @EventHandler
-    public void interactEntity(PlayerInteractAtEntityEvent event) {
-        Player p = event.getPlayer();
-        if (event.getRightClicked() instanceof ItemFrame) {
-            ItemFrame itemframe = (ItemFrame) event.getRightClicked();
-            if (Material.FILLED_MAP.equals(itemframe.getItem().getType())) {
-                ItemStack map = itemframe.getItem();
-                if (map.getItemMeta() != null) {
-                    MapMeta mapMeta = (MapMeta) map.getItemMeta();
-                    if (mapMeta.getMapView() != null && mapMeta.getMapView().getRenderers() != null) {
-                        for (MapRenderer mr : mapMeta.getMapView().getRenderers()) {
-                            if (mr instanceof RedditRenderer) {
-                                //Bingo!
-                                RedditRenderer rr = (RedditRenderer) mr;
-                                p.sendMessage(ChatColor.YELLOW + "Image/Video link: " + ChatColor.BLUE + ChatColor.UNDERLINE + rr.url);
-                                event.setCancelled(true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     @EventHandler
     public void closeInventory(InventoryCloseEvent event) {
@@ -266,6 +254,30 @@ public class EventListener implements Listener {
                 .anyMatch(o->o.hasPlayer(event.getPlayer().getUniqueId()))) {
             Player player = event.getPlayer();
             reddit.kickOut(player);
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent blockBreakEvent) {
+        final Location location = blockBreakEvent.getBlock().getLocation();
+        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+            blockBreakEvent.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent blockPlaceEvent) {
+        final Location location = blockPlaceEvent.getBlock().getLocation();
+        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+            blockPlaceEvent.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(HangingBreakEvent hangingBreakEvent) {
+        final Location location = hangingBreakEvent.getEntity().getLocation();
+        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+            hangingBreakEvent.setCancelled(true);
         }
     }
 

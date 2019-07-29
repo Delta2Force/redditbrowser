@@ -18,11 +18,9 @@ public class RedditRenderer extends MapRenderer{
 	public BufferedImage image;
 	public String url;
 	private boolean drawn;
-	public RedditRenderer(String url) {
-		this.url = url;
-	}
 
-	public void setImage(BufferedImage image) {
+	public void setImage(String url, BufferedImage image) {
+		this.url = url;
 		this.drawn = false;
 		this.image = image;
 	}
