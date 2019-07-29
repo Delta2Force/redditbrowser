@@ -2,6 +2,8 @@ package me.delta2force.redditbrowser.room;
 
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
+import me.delta2force.redditbrowser.room.screen.ScreenController;
+import me.delta2force.redditbrowser.room.screen.ScreenControllerFactory;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.models.Submission;
 import net.dean.jraw.tree.CommentNode;
@@ -35,10 +37,10 @@ public class Room {
     private final Player owner;
     private final Location location;
     private final RoomDimensions roomDimensions;
+    private final ScreenController screenController;
     private RedditQueue redditQueue;
     private String subreddit;
     private Submission currentSubmission;
-    private final Screen screen;
 
     public Room(
             RedditBrowserPlugin redditBrowserPlugin,
@@ -54,11 +56,9 @@ public class Room {
                 -roomDimensions.getRoomWidth() + 2,
                 -2,
                 -roomDimensions.getRoomDepth());
-        this.screen = new Screen(
-                this,
-                screenLocation,
-                roomDimensions.getScreenWidth(),
-                roomDimensions.getScreenHeight());
+        final Location controlStationLocation = location.clone().add(-roomDimensions.getRoomWidth() + 3, -roomDimensions.getRoomHeight() + 1, -3);
+        this.screenController = ScreenControllerFactory.create(this, screenLocation, controlStationLocation, roomDimensions.getScreenWidth(), roomDimensions.getScreenHeight());
+
         setSubReddit(subreddit);
     }
 
@@ -72,7 +72,7 @@ public class Room {
 
                     Bukkit.getScheduler().runTaskLater(redditBrowserPlugin, () -> {
                         setupPlayers(submission, startingPlayers);
-                    }, 10);
+                    }, 30);
                 });
             } else {
                 Bukkit.getScheduler().runTask(redditBrowserPlugin, () -> {
@@ -81,7 +81,7 @@ public class Room {
                         setupPlayers(submission, startingPlayers);
                         startingPlayers.forEach(player -> player.sendMessage(ChatColor.RED + "No posts found."));
 
-                    }, 10);
+                    }, 30);
                 });
             }
         });
@@ -93,7 +93,7 @@ public class Room {
 
     public void refresh() {
         redditQueue.reset();
-        screen.clean();
+        screenController.clean();
         build(getPlayers());
     }
 
@@ -205,7 +205,7 @@ public class Room {
         emptyCommentsChest();
         buildLeaveButton();
         removeNewCommentsButton();
-        screen.buildScreen(submission);
+        screenController.showPost(submission);
         if (submission != null) {
             buildNavigationButton();
             buildVoteButtons(submission);
@@ -389,6 +389,7 @@ public class Room {
         Block uv = location.getWorld().getBlockAt(location.clone().add(-roomDimensions.getRoomWidth() + 1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
         uv.setType(Material.OAK_BUTTON);
         uv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(redditBrowserPlugin, submission.getId()));
+        uv.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, getRoomId()));
         uv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.UPVOTE));
         Directional uvdir = (Directional) uv.getBlockData();
         uvdir.setFacing(BlockFace.SOUTH);
@@ -399,6 +400,7 @@ public class Room {
         Block dv = location.getWorld().getBlockAt(location.clone().add(-1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
         dv.setType(Material.OAK_BUTTON);
         dv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(redditBrowserPlugin, submission.getId()));
+        dv.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, getRoomId()));
         dv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.DOWNVOTE));
 
         Directional dvdir = (Directional) dv.getBlockData();
@@ -474,8 +476,8 @@ public class Room {
         }
     }
 
-    private void spawnHologram(Location l, String name) {
-        ArmorStand as = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
+    public static void spawnHologram(Location location, String name) {
+        ArmorStand as = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
         as.setCustomName(name);
         as.setCustomNameVisible(true);
         as.setGravity(false);
@@ -562,5 +564,9 @@ public class Room {
 
     public RedditBrowserPlugin getRedditBrowserPlugin() {
         return redditBrowserPlugin;
+    }
+
+    public ScreenController getScreenController() {
+        return screenController;
     }
 }

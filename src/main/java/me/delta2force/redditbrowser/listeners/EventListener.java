@@ -2,7 +2,6 @@ package me.delta2force.redditbrowser.listeners;
 
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
-import me.delta2force.redditbrowser.renderer.RedditRenderer;
 import me.delta2force.redditbrowser.room.Room;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.tree.CommentNode;
@@ -14,7 +13,6 @@ import java.util.UUID;
 
 import org.bukkit.*;
 import org.bukkit.block.Chest;
-import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,14 +23,11 @@ import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapRenderer;
 
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
@@ -60,10 +55,18 @@ public class EventListener implements Listener {
                 Bukkit.getScheduler().runTaskAsynchronously(reddit, new Runnable() {
                     @Override
                     public void run() {
-                        event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
                         reddit.redditClient.submission(submissionID).upvote();
                         int karma = reddit.redditClient.submission(submissionID).inspect().getScore();
-                        event.getPlayer().sendMessage(ChatColor.GREEN + "You have upvoted the post! It now has " + karma + " karma.");
+                        UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                        if (reddit.roomMap.containsKey(roomId)) {
+                            final Room room = reddit.roomMap.get(roomId);
+                            room.getPlayers().forEach(player -> {
+                                player.sendMessage(ChatColor.GREEN + "You have upvoted the post! It now has " + karma + " karma.");
+                                player.playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
+                            });
+                        } else {
+                            event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                        }
                     }
                 });
             } else if (metadataContains(metadata, InteractiveEnum.DOWNVOTE)) {
@@ -74,11 +77,19 @@ public class EventListener implements Listener {
                         event.getPlayer().playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
                         reddit.redditClient.submission(submissionID).downvote();
                         int karma = reddit.redditClient.submission(submissionID).inspect().getScore();
-                        event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post! It now has " + karma + " karma.");
-                    }
+                        UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                        if (reddit.roomMap.containsKey(roomId)) {
+                            final Room room = reddit.roomMap.get(roomId);
+                            room.getPlayers().forEach(player -> {
+                                event.getPlayer().sendMessage(ChatColor.RED + "You have downvoted the post! It now has " + karma + " karma.");
+                                player.playSound(event.getClickedBlock().getLocation(), Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
+                            });
+                        } else {
+                            event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                        }                    }
                 });
             } else if (metadataContains(metadata, InteractiveEnum.NEXT_ROOM)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
                     if (reddit.roomMap.containsKey(roomId)) {
@@ -89,7 +100,7 @@ public class EventListener implements Listener {
                     }
                 }
             } else if (metadataContains(metadata, InteractiveEnum.PREVIOUS_ROOM)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     if (reddit.roomMap.containsKey(roomId)) {
@@ -100,7 +111,7 @@ public class EventListener implements Listener {
                     }
                 }
             } else if (metadataContains(metadata, InteractiveEnum.LOAD_COMMENTS)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     if (reddit.roomMap.containsKey(roomId)) {
@@ -111,7 +122,7 @@ public class EventListener implements Listener {
                     }
                 }
             } else if (metadataContains(metadata, InteractiveEnum.REFRESH)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     if (reddit.roomMap.containsKey(roomId)) {
@@ -122,12 +133,12 @@ public class EventListener implements Listener {
                     }
                 }
             } else if (metadataContains(metadata, InteractiveEnum.LEAVE)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     reddit.kickOut(event.getPlayer());
                 }
             } else if (metadataContains(metadata, InteractiveEnum.WRITE_COMMENT)) {
-                if(!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     final ItemStack writableBookStack = createWritableBookStack();
                     event.getPlayer().getInventory().setItemInMainHand(writableBookStack);
@@ -141,6 +152,25 @@ public class EventListener implements Listener {
                     event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
                 }
                 event.setCancelled(true);
+            } else if (metadataContains(metadata, InteractiveEnum.SCROLL_UP)) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getScreenController().back();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+            } else if (metadataContains(metadata, InteractiveEnum.SCROLL_DOWN) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getScreenController().forward();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+
             }
         }
     }
@@ -149,14 +179,14 @@ public class EventListener implements Listener {
     public void interactInventory(InventoryClickEvent event) {
         Player p = (Player) event.getWhoClicked();
 
-        if(event.getCurrentItem() != null &&
+        if (event.getCurrentItem() != null &&
                 event.getCurrentItem().getType().equals(Material.WRITTEN_BOOK)
                 && event.getInventory().getType().equals(InventoryType.CHEST) && event.isRightClick()) {
-            if(!event.getView().getTitle().startsWith("Comment ")) {
-                if(reddit.roomMap.values()
+            if (!event.getView().getTitle().startsWith("Comment ")) {
+                if (reddit.roomMap.values()
                         .stream()
-                        .noneMatch(o->o.hasPlayer(p.getUniqueId()))){
-                    return ;
+                        .noneMatch(o -> o.hasPlayer(p.getUniqueId()))) {
+                    return;
                 }
             }
             String commentID = event.getCurrentItem().getItemMeta().getLore().get(0);
@@ -250,8 +280,8 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onLeave(PlayerQuitEvent event) {
-        if(reddit.roomMap.values().stream()
-                .anyMatch(o->o.hasPlayer(event.getPlayer().getUniqueId()))) {
+        if (reddit.roomMap.values().stream()
+                .anyMatch(o -> o.hasPlayer(event.getPlayer().getUniqueId()))) {
             Player player = event.getPlayer();
             reddit.kickOut(player);
         }
@@ -260,7 +290,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent blockBreakEvent) {
         final Location location = blockBreakEvent.getBlock().getLocation();
-        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+        if (reddit.roomMap.values().stream().anyMatch(o -> o.isInside(location))) {
             blockBreakEvent.setCancelled(true);
         }
     }
@@ -268,7 +298,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent blockPlaceEvent) {
         final Location location = blockPlaceEvent.getBlock().getLocation();
-        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+        if (reddit.roomMap.values().stream().anyMatch(o -> o.isInside(location))) {
             blockPlaceEvent.setCancelled(true);
         }
     }
@@ -276,7 +306,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onBlockPlace(HangingBreakEvent hangingBreakEvent) {
         final Location location = hangingBreakEvent.getEntity().getLocation();
-        if(reddit.roomMap.values().stream().anyMatch(o->o.isInside(location))) {
+        if (reddit.roomMap.values().stream().anyMatch(o -> o.isInside(location))) {
             hangingBreakEvent.setCancelled(true);
         }
     }

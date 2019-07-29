@@ -1,17 +1,14 @@
-package me.delta2force.redditbrowser.room;
+package me.delta2force.redditbrowser.room.screen;
 
-import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
-import me.delta2force.redditbrowser.renderer.TiledRenderer;
-import me.delta2force.redditbrowser.repository.URLToImageRepository;
-import net.dean.jraw.models.Submission;
+import me.delta2force.redditbrowser.room.screen.renderer.TiledRenderer;
+import me.delta2force.redditbrowser.room.Room;
 import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapView;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -20,31 +17,34 @@ import java.awt.image.BufferedImage;
 import java.util.Collection;
 import java.util.Objects;
 
-import static java.lang.Math.ceil;
 import static me.delta2force.redditbrowser.RedditBrowserPlugin.INTERACTIVE_ENUM;
 import static me.delta2force.redditbrowser.RedditBrowserPlugin.ROOM_ID;
-import static me.delta2force.redditbrowser.room.Room.COMMENT_DISPLAY_NAME;
 
 public class Screen {
+    public static final int BLOCK_PIXELS = 128;
+
     private final Room room;
     private TiledRenderer tiledRenderer = null;
     private final Location screenLocation;
     private final int screenWidth;
     private final int screenHeight;
+    private final ScreenController screenController;
 
     public Screen(
             Room room,
             Location screenLocation,
             int screenWidth,
-            int screenHeight) {
+            int screenHeight,
+            ScreenController screenController) {
         this.room = room;
         this.screenLocation = screenLocation;
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
+        this.screenController = screenController;
     }
 
-    public void buildScreen(Submission submission) {
-        if (submission != null && !submission.isSelfPost()) {
+    public void buildScreen(BufferedImage bufferedImage) {
+        if (bufferedImage != null) {
             if (tiledRenderer == null) {
                 cleanBackWall();
                 final World world = screenLocation.getWorld();
@@ -74,60 +74,27 @@ public class Screen {
 
                         }
                     }
-                    updateRenderer(submission);
+                    updateRenderer(bufferedImage);
 
-                }, 5);
+                }, 50);
             } else {
-                updateRenderer(submission);
+                updateRenderer(bufferedImage);
             }
-        } else if (submission != null && submission.isSelfPost()) {
-            buildSelfPost(submission);
         } else {
             cleanBackWall();
         }
     }
 
-    private void updateRenderer(Submission submission) {
+    private void updateRenderer(BufferedImage bufferedImage) {
         Bukkit.getScheduler().runTaskAsynchronously(room.getRedditBrowserPlugin(), () -> {
-            final BufferedImage image = URLToImageRepository.findImage(submission);
             if (tiledRenderer != null) {
-                tiledRenderer.updateImage(submission.getUrl(), image);
+                tiledRenderer.updateImage(bufferedImage);
             }
         });
     }
 
     public void clean() {
         cleanBackWall();
-    }
-
-    private void buildSelfPost(Submission submission) {
-        cleanBackWall();
-        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-        BookMeta bookmeta = (BookMeta) book.getItemMeta();
-        bookmeta.setTitle(submission.getTitle());
-        bookmeta.setDisplayName(COMMENT_DISPLAY_NAME);
-        bookmeta.setAuthor(submission.getAuthor());
-        if (submission.getSelfText().length() > 255) {
-            double f = ceil(((float) submission.getSelfText().length()) / 255f);
-            for (int i = 0; i < f; i++) {
-                if (submission.getSelfText().length() < (i + 1) * 255) {
-                    bookmeta.addPage(submission.getSelfText().substring(i * 255));
-                } else {
-                    bookmeta.addPage(submission.getSelfText().substring(i * 255, (i + 1) * 255));
-                }
-            }
-        } else {
-            bookmeta.addPage(submission.getSelfText());
-        }
-
-        Bukkit.getScheduler().runTaskLater(room.getRedditBrowserPlugin(), () -> {
-            final Location smallScreenLocation = screenLocation.clone().add(screenWidth / 2, -screenHeight + 1, 0);
-            smallScreenLocation.getBlock().setType(Material.GLOWSTONE);
-            ItemFrame itf = (ItemFrame) smallScreenLocation.getWorld().spawnEntity(smallScreenLocation.clone().add(0, 0, 1), EntityType.ITEM_FRAME);
-            itf.setFacingDirection(BlockFace.SOUTH);
-            book.setItemMeta(bookmeta);
-            itf.setItem(book);
-        }, 5);
     }
 
     private void cleanBackWall() {
@@ -150,5 +117,25 @@ public class Screen {
                         2,
                         o -> Objects.equals(EntityType.ITEM_FRAME, o.getType()));
         nearbyEntities.forEach(Entity::remove);
+    }
+
+    public int getBlockPixels() {
+        return BLOCK_PIXELS;
+    }
+
+    public int getScreenWidth() {
+        return screenWidth;
+    }
+
+    public int getScreenHeight() {
+        return screenHeight;
+    }
+
+    public ScreenController getScreenController() {
+        return screenController;
+    }
+
+    public Room getRoom() {
+        return room;
     }
 }
