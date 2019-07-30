@@ -5,10 +5,12 @@ import java.util.List;
 
 public class ScreenModel {
     private List<BufferedImage> images;
+    private final ScreenModelType screenModelType;
     private int selectedIndex = 0;
 
-    public ScreenModel(List<BufferedImage> images) {
+    public ScreenModel(List<BufferedImage> images, ScreenModelType screenModelType) {
         this.images = images;
+        this.screenModelType = screenModelType;
     }
 
     public List<BufferedImage> getImages() {
@@ -22,6 +24,9 @@ public class ScreenModel {
         return null;
     }
 
+    public ScreenModelType getScreenModelType() {
+        return screenModelType;
+    }
 
     public int getSelectedIndex() {
         return selectedIndex;
@@ -30,4 +35,5 @@ public class ScreenModel {
     public void setSelectedIndex(int index) {
         this.selectedIndex = index;
     }
+
 }

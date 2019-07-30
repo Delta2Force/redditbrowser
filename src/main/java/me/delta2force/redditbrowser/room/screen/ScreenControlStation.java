@@ -8,15 +8,9 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.block.data.Directional;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.metadata.FixedMetadataValue;
 
-import java.util.Collection;
-import java.util.Objects;
-
 import static me.delta2force.redditbrowser.RedditBrowserPlugin.*;
-import static me.delta2force.redditbrowser.room.Room.spawnHologram;
 
 public class ControlStation {
     private static final String SCROLL_DOWN = "Scroll down";
@@ -88,7 +82,11 @@ public class ControlStation {
     }
 
     public void clean() {
-
+        final Location blockLocation = location.clone().add(0, 1, 0);
+        blockLocation.getBlock().setType(Material.AIR);
+        blockLocation.clone().add(0, 0, 1).getBlock().setType(Material.AIR);
+        final Location blockLocation2 = location.clone().add(0, 2, 0);
+        blockLocation2.getBlock().setType(Material.AIR);
+        blockLocation2.clone().add(0, 0, 1).getBlock().setType(Material.AIR);
     }
-
 }
