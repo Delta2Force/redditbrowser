@@ -1,4 +1,4 @@
-package me.delta2force.redditbrowser.room.screen;
+package me.delta2force.redditbrowser.room.comments;
 
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.tree.CommentNode;
@@ -89,14 +89,14 @@ public class CommentNavigator {
         boolean first = true;
         for (int index : path) {
             if (first) {
-                if (commentNodes != null && index >= 0 && commentNodes.size() >= index) {
+                if (commentNodes != null && index >= 0 && commentNodes.size() > index) {
                     lastNode = commentNodes.get(index);
                     first = false;
                 } else {
                     return null;
                 }
 
-            } else if (lastNode != null && index >= 0 && lastNode.getReplies().size() >= index) {
+            } else if (lastNode != null && index >= 0 && lastNode.getReplies().size() > index) {
                 lastNode = lastNode.getReplies().get(index);
             } else {
                 return null;

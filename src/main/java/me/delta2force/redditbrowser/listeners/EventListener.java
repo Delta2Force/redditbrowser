@@ -110,13 +110,24 @@ public class EventListener implements Listener {
                         event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
                     }
                 }
-            } else if (metadataContains(metadata, InteractiveEnum.LOAD_COMMENTS)) {
+            } else if (metadataContains(metadata, InteractiveEnum.SHOW_COMMENTS)) {
                 if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
                     UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
                     event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
                     if (reddit.roomMap.containsKey(roomId)) {
                         final Room room = reddit.roomMap.get(roomId);
-                        room.displayComments();
+                        room.showComment();
+                    } else {
+                        event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                    }
+                }
+            } else if (metadataContains(metadata, InteractiveEnum.SHOW_POST)) {
+                if (!event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    if (reddit.roomMap.containsKey(roomId)) {
+                        final Room room = reddit.roomMap.get(roomId);
+                        room.showPost();
                     } else {
                         event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
                     }
@@ -170,9 +181,43 @@ public class EventListener implements Listener {
                 } else {
                     event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
                 }
-
-            }
-        }
+            } else if (metadataContains(metadata, InteractiveEnum.PARENT_COMMENT) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getCommentsController().parent();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+            } else if (metadataContains(metadata, InteractiveEnum.CHILD_COMMENT) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getCommentsController().child();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+            } else if (metadataContains(metadata, InteractiveEnum.NEXT_COMMENT) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getCommentsController().next();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+            } else if (metadataContains(metadata, InteractiveEnum.PREVIOUS_COMMENT) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                UUID roomId = (UUID) event.getClickedBlock().getMetadata(RedditBrowserPlugin.ROOM_ID).get(0).value();
+                if (reddit.roomMap.containsKey(roomId) && !event.getClickedBlock().getMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED).get(0).asBoolean()) {
+                    final Room room = reddit.roomMap.get(roomId);
+                    event.getClickedBlock().setMetadata(RedditBrowserPlugin.BUTTON_ACTIVATED, new FixedMetadataValue(reddit, true));
+                    room.getCommentsController().previous();
+                } else {
+                    event.getPlayer().sendMessage(ChatColor.RED + "Room not found!");
+                }
+            }                }
     }
 
     @EventHandler

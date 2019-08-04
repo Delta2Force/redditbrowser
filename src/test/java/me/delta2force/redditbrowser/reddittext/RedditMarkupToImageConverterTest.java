@@ -50,7 +50,7 @@ class RedditMarkupToImageConverterTest {
     public void test() throws IOException {
         final int width = 128 * 5;
         final int height = 128 * 5;
-        final List<BufferedImage> bufferedImages = new RedditMarkupToImageConverter().render(TEXT, width, height);
+        final List<BufferedImage> bufferedImages = new RedditMarkupToImageConverter().render(TEXT, width, height, 128);
         assertNotNull(bufferedImages);
         assertFalse(bufferedImages.isEmpty());
         for(int i = 0; i<bufferedImages.size(); i++) {
@@ -63,4 +63,20 @@ class RedditMarkupToImageConverterTest {
         }
     }
 
+    @Test
+    public void testComment() throws IOException {
+        final int width = 128 * 5;
+        final int height = 128 * 5;
+
+        final List<BufferedImage> bufferedImages = new RedditMarkupToImageConverter().render("<div><a>nosir_nomaam</a> - 10 points - 2019-07-29T21:23:18</div>", "Their faces are priceless!", width, height, 128);
+        assertNotNull(bufferedImages);
+        assertFalse(bufferedImages.isEmpty());
+        for(int i = 0; i<bufferedImages.size(); i++) {
+            final BufferedImage image = bufferedImages.get(i);
+
+            ImageIO.write(image, "jpeg", new File("target/images/2-RedditMarkupToImageConverterTest" + i + ".jpg"));
+            assertEquals(width, image.getWidth(), "Image " + i + " doesn't have the correct width");
+            assertEquals(height, image.getHeight(), "Image " + i + " doesn't have the correct height");
+        }
+    }
 }
