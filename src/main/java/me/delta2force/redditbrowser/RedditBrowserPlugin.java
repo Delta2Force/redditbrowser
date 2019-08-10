@@ -221,8 +221,8 @@ public class RedditBrowserPlugin extends JavaPlugin {
         }
         int roomHeight = screenHeight > 1 ? screenHeight + 3 : screenHeight + 3;
         int roomWidth = screenWidth >= 3 ? screenWidth + 3 : screenWidth + 2;
-        if (roomWidth < 5) {
-            roomWidth = 5;
+        if (roomWidth < 10) {
+            roomWidth = 10;
         }
         return new RoomDimensions(
                 roomWidth,

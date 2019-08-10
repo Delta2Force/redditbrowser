@@ -115,6 +115,14 @@
                     <groupId>com.vladsch.flexmark</groupId>
                     <artifactId>mark-pdf-converter</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.apache.pdfbox</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.openhtmltopdf</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>

@@ -8,6 +8,7 @@ import com.vladsch.flexmark.util.ast.Document;
 import com.vladsch.flexmark.util.data.DataHolder;
 import com.vladsch.flexmark.util.data.MutableDataSet;
 import gui.ava.html.image.generator.HtmlImageGenerator;
+import org.apache.commons.lang.StringUtils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -21,12 +22,13 @@ public class RedditMarkupToImageConverter {
     );
 
     static final MutableDataSet FORMAT_OPTIONS = new MutableDataSet();
+
     static {
         // copy extensions from Pegdown compatible to Formatting, but leave the rest default
         FORMAT_OPTIONS.set(Parser.EXTENSIONS, OPTIONS.get(Parser.EXTENSIONS));
     }
 
-    public  static List<BufferedImage> render(String htmlHeader, String text, int width, int height, int blockHeight) {
+    public static List<BufferedImage> render(String htmlHeader, String text, int width, int height, int blockHeight) {
         Parser parser = Parser.builder(OPTIONS).build();
         HtmlRenderer renderer = HtmlRenderer.builder(FORMAT_OPTIONS).build();
 
@@ -36,10 +38,13 @@ public class RedditMarkupToImageConverter {
         //Trying to force the width
         final double estimatedTextWidth = Math.floor(width * .7);
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("<div style=\"font-size: x-large; width: " )
+        stringBuilder.append("<div style=\"font-size: x-large; width: ")
                 .append(estimatedTextWidth)
-                .append( "px; word-break: break-all; overflow-wrap: break-word;\">")
-                .append(htmlHeader)
+                .append("px; word-break: break-all; overflow-wrap: break-word;\">");
+        if (StringUtils.isNotBlank(htmlHeader)) {
+            stringBuilder.append(htmlHeader);
+        }
+        stringBuilder
                 .append(html)
                 .append("</div>");
 
@@ -54,18 +59,18 @@ public class RedditMarkupToImageConverter {
         return splitImage(whiteBackgroundBufferedImage, width, height, blockHeight);
     }
 
-    public  static List<BufferedImage> render(String text, int width, int height, int blockHeight) {
+    public static List<BufferedImage> render(String text, int width, int height, int blockHeight) {
         return render(null, text, width, height, blockHeight);
     }
 
-    private static List<BufferedImage> splitImage(BufferedImage image, int width, int height,int blockHeight) {
+    private static List<BufferedImage> splitImage(BufferedImage image, int width, int height, int blockHeight) {
         final List<BufferedImage> pages = new ArrayList<>();
-        for(int y = 0; y<image.getHeight(); y+=height-(blockHeight/2)) {
+        for (int y = 0; y < image.getHeight(); y += height - (blockHeight / 2)) {
             final BufferedImage page = new BufferedImage(width, height, image.getType());
             pages.add(page);
             Graphics2D gr = page.createGraphics();
             gr.setPaint(Color.WHITE);
-            gr.fillRect (0, 0, width, height);
+            gr.fillRect(0, 0, width, height);
             gr.drawImage(image,
                     0,
                     0,

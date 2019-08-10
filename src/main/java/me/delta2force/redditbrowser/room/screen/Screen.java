@@ -64,8 +64,6 @@ public class Screen {
                             MapMeta mapMeta = (MapMeta) map.getItemMeta();
                             MapView mapView = Bukkit.createMap(world);
                             mapView.setTrackingPosition(false);
-                            mapView.setLocked(true);
-                            mapView.setUnlimitedTracking(false);
                             mapView.getRenderers().forEach(mapView::removeRenderer);
                             mapView.addRenderer(tiledRenderer.getRenderer(row, col));
                             mapMeta.setMapView(mapView);

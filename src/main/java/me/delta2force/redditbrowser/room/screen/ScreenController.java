@@ -63,9 +63,9 @@ public class ScreenController {
     }
 
     private void update() {
-        screen.buildScreen(screenModel.getSelectedImage());
-        screenControlStation.build();
-        commentsController.update();
+            screen.buildScreen(screenModel != null ? screenModel.getSelectedImage() : null);
+            screenControlStation.build();
+            commentsController.update();
     }
 
     private ScreenModel findBufferedImagesForPost(Submission submission) {
@@ -85,11 +85,11 @@ public class ScreenController {
 
 
     public boolean canBack() {
-        return screenModel.getSelectedIndex() > 0;
+        return screenModel != null && screenModel.getSelectedIndex() > 0;
     }
 
     public boolean canForward() {
-        return screenModel.getImages().size() > screenModel.getSelectedIndex() +1;
+        return screenModel != null && screenModel.getImages().size() > screenModel.getSelectedIndex() +1;
     }
 
     public void back() {
@@ -112,6 +112,7 @@ public class ScreenController {
 
     public void clean() {
         screen.clean();
+        screenModel = null;
         screenControlStation.clean();
     }
 

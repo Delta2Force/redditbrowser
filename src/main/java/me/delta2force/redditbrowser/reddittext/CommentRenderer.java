@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.Date;
 import java.util.List;
 
@@ -20,13 +21,13 @@ public class CommentRenderer {
         final StringBuilder headerBuilder = new StringBuilder();
         final Date created = comment.getCreated();
         final LocalDateTime createdLocalDateTime = LocalDateTime.ofInstant(created.toInstant(), ZoneId.systemDefault());
-        headerBuilder.append("<div><a>")
+        headerBuilder.append("<div><a href=\"\">")
                 .append(comment.getAuthor())
                 .append("</a>")
                 .append(" - ")
                 .append(comment.getScore())
                 .append(" points - ")
-                .append(createdLocalDateTime.format(DateTimeFormatter.ISO_DATE_TIME))
+                .append(createdLocalDateTime.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)))
                 .append("</div>");
         return RedditMarkupToImageConverter.render(
                 headerBuilder.toString(),
