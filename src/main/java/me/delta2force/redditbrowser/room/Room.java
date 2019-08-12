@@ -2,18 +2,24 @@ package me.delta2force.redditbrowser.room;
 
 import me.delta2force.redditbrowser.RedditBrowserPlugin;
 import me.delta2force.redditbrowser.interaction.InteractiveEnum;
+import me.delta2force.redditbrowser.room.comments.CommentsController;
+import me.delta2force.redditbrowser.room.screen.ScreenController;
+import me.delta2force.redditbrowser.room.screen.ScreenControllerFactory;
+import me.delta2force.redditbrowser.room.screen.ScreenModelType;
+import net.dean.jraw.ApiException;
 import net.dean.jraw.models.Comment;
 import net.dean.jraw.models.Submission;
-import net.dean.jraw.tree.CommentNode;
 import net.dean.jraw.tree.RootCommentNode;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.Chest;
+import org.bukkit.block.Hopper;
 import org.bukkit.block.data.Directional;
-import org.bukkit.entity.*;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 
@@ -21,24 +27,26 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import static java.lang.Math.ceil;
 import static me.delta2force.redditbrowser.RedditBrowserPlugin.*;
 
 public class Room {
+    private static final float VOLUME = 75f;
+
     private static final String PREVIOUS_HOLOGRAM_NAME = colorCode("9") + "Previous";
     private static final Material ROOM_MATERIAL = Material.WHITE_WOOL;
-    private static final String COMMENTS_HOLOGRAM = colorCode("9") + "Comments";
     private static final String WRITE_COMMENT_HOLOGRAM = colorCode("9") + "Write comment";
+    private static final String REPLY_COMMENT_HOLOGRAM = colorCode("9") + "Reply";
+
     public static final String COMMENT_DISPLAY_NAME = "Comment";
     public static final String NEWLINE = "\n";
     private final RedditBrowserPlugin redditBrowserPlugin;
     private final Player owner;
     private final Location location;
     private final RoomDimensions roomDimensions;
+    private final ScreenController screenController;
     private RedditQueue redditQueue;
     private String subreddit;
     private Submission currentSubmission;
-    private final Screen screen;
 
     public Room(
             RedditBrowserPlugin redditBrowserPlugin,
@@ -51,12 +59,16 @@ public class Room {
         this.location = location;
         this.roomDimensions = roomDimensions;
         final Location screenLocation = location.clone().add(
-                -roomDimensions.getRoomWidth() + 2,
+                -roomDimensions.getRoomWidth() + ((roomDimensions.getRoomWidth() - roomDimensions.getScreenHeight()) / 2) + 1,
                 -2,
                 -roomDimensions.getRoomDepth());
-        this.screen = new Screen(
+        final Location controlStationLocation = location.clone().add(-roomDimensions.getRoomWidth() + 2, -roomDimensions.getRoomHeight() + 1, -3);
+        final Location commentControlStationLocation = location.clone().add(-roomDimensions.getRoomWidth() + 5, -roomDimensions.getRoomHeight(), -3);
+        this.screenController = ScreenControllerFactory.create(
                 this,
                 screenLocation,
+                controlStationLocation,
+                commentControlStationLocation,
                 roomDimensions.getScreenWidth(),
                 roomDimensions.getScreenHeight());
         setSubReddit(subreddit);
@@ -72,7 +84,7 @@ public class Room {
 
                     Bukkit.getScheduler().runTaskLater(redditBrowserPlugin, () -> {
                         setupPlayers(submission, startingPlayers);
-                    }, 10);
+                    }, 30);
                 });
             } else {
                 Bukkit.getScheduler().runTask(redditBrowserPlugin, () -> {
@@ -81,7 +93,7 @@ public class Room {
                         setupPlayers(submission, startingPlayers);
                         startingPlayers.forEach(player -> player.sendMessage(ChatColor.RED + "No posts found."));
 
-                    }, 10);
+                    }, 30);
                 });
             }
         });
@@ -93,7 +105,7 @@ public class Room {
 
     public void refresh() {
         redditQueue.reset();
-        screen.clean();
+        screenController.clean();
         build(getPlayers());
     }
 
@@ -202,29 +214,26 @@ public class Room {
 
     private void updateRoom(Submission submission) {
         removeHologramByType(location, EntityType.ARMOR_STAND);
-        emptyCommentsChest();
+        emptyCommentsHopper();
         buildLeaveButton();
         removeNewCommentsButton();
-        screen.buildScreen(submission);
+        screenController.showPost(submission);
+        removeHopper();
         if (submission != null) {
             buildNavigationButton();
             buildVoteButtons(submission);
-            buildCommentsButton();
+            buildNewCommentButton();
+            buildCommentHopper();
             buildRefreshButton();
             buildLeaveButton();
             buildSubredditHologram(submission);
-            realignItemFrames();
         }
     }
 
-    private void realignItemFrames() {
-        location.getWorld()
-                .getNearbyEntities(location,
-                        -roomDimensions.getRoomWidth(),
-                        -roomDimensions.getRoomHeight(),
-                        -roomDimensions.getRoomDepth(),
-                        o -> Objects.equals(EntityType.ITEM_FRAME, o.getType()))
-                .forEach(o -> ((ItemFrame) o).setRotation(Rotation.NONE));
+    private void removeHopper() {
+        Location chopperLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth() + 1);
+        final Block hopper = chopperLocation.getBlock();
+        hopper.setType(Material.AIR);
     }
 
     private void buildSubredditHologram(Submission submission) {
@@ -236,6 +245,7 @@ public class Room {
                 .clone().add(.5, -2, .5), colorCode("a") + "r/" + submission.getSubreddit());
     }
 
+
     private void buildRefreshButton() {
         Block refreshButton = location.getWorld().getBlockAt(location.clone().add(-(roomDimensions.getRoomWidth() / 2), -roomDimensions.getRoomHeight() + 2, -1));
         refreshButton.setType(Material.OAK_BUTTON);
@@ -246,122 +256,6 @@ public class Room {
         refreshButtonDirectional.setFacing(BlockFace.NORTH);
         refreshButton.setBlockData(refreshButtonDirectional);
         spawnHologram(refreshButton.getLocation().clone().add(.5, -2, .5), colorCode("a") + "Refresh");
-    }
-
-    private void buildLeaveButton() {
-        Block leaveButton = location.getWorld().getBlockAt(location.clone().add(-(roomDimensions.getRoomWidth() / 2) - 1, -roomDimensions.getRoomHeight() + 2, -1));
-        leaveButton.setType(Material.OAK_BUTTON);
-        leaveButton.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.LEAVE));
-        leaveButton.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, owner.getUniqueId()));
-        leaveButton.setMetadata(BUTTON_ACTIVATED, new FixedMetadataValue(redditBrowserPlugin, false));
-        Directional leaveButtonDirectional = (Directional) leaveButton.getBlockData();
-        leaveButtonDirectional.setFacing(BlockFace.NORTH);
-        leaveButton.setBlockData(leaveButtonDirectional);
-        spawnHologram(leaveButton.getLocation().clone().add(.5, -2, .5), colorCode("c") + "Leave");
-    }
-
-    private void emptyCommentsChest() {
-        Location chestLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1);
-        final Block block = chestLocation.getBlock();
-        if (Material.CHEST.equals(block.getType())) {
-            Chest chest = (Chest) block.getState();
-            chest.getBlockInventory().clear();
-        }
-    }
-
-    private void buildCommentsButton() {
-        Location chestLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1);
-        final Block block = chestLocation.getBlock();
-        block.setType(ROOM_MATERIAL);
-        Block commentButton = location.getWorld().getBlockAt(chestLocation.clone().add(0, 0, 1));
-        commentButton.setType(Material.OAK_BUTTON);
-        commentButton.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.LOAD_COMMENTS));
-        commentButton.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, owner.getUniqueId()));
-        commentButton.setMetadata(BUTTON_ACTIVATED, new FixedMetadataValue(redditBrowserPlugin, false));
-
-        Directional commentsButtonDirection = (Directional) commentButton.getBlockData();
-        commentsButtonDirection.setFacing(BlockFace.SOUTH);
-        commentButton.setBlockData(commentsButtonDirection);
-
-        spawnHologram(commentButton.getLocation().clone().add(.5, -2, .5), COMMENTS_HOLOGRAM);
-    }
-
-    private void buildEmptyRoom() {
-        emptyCommentsChest();
-        cube(ROOM_MATERIAL, location, location.clone().add(-roomDimensions.getRoomWidth(), -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth()));
-        cube(Material.AIR, location.clone().add(-1, -1, -1), location.clone().add(-roomDimensions.getRoomWidth() + 1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
-    }
-
-    private void createRoom(
-            Submission submission) {
-        buildEmptyRoom();
-        updateRoom(submission);
-    }
-
-    public void displayComments() {
-        Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
-            final RootCommentNode comments = redditBrowserPlugin.redditClient
-                    .submission(currentSubmission.getId())
-                    .comments();
-            Bukkit.getScheduler().runTask(
-                    redditBrowserPlugin,
-                    () -> buildCommentsChest(location, currentSubmission.getId(), comments, roomDimensions));
-        });
-    }
-
-    private void buildCommentsChest(
-            Location location,
-            String submissionId,
-            RootCommentNode comments,
-            RoomDimensions roomDimensions) {
-        if (comments != null) {
-            buildNewCommentButton();
-            Location chestLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1);
-            final Location buttonLocation = chestLocation.clone().add(0, 0, 1);
-            buttonLocation.getBlock().setType(Material.AIR);
-            Block b = chestLocation.getBlock();
-
-            b.setType(Material.CHEST);
-            Directional chestDirection = (Directional) b.getBlockData();
-            chestDirection.setFacing(BlockFace.SOUTH);
-            b.setBlockData(chestDirection);
-            b.setMetadata(SUBMISSION_ID, new FixedMetadataValue(redditBrowserPlugin, submissionId));
-            b.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.COMMENT_CHEST));
-            Chest chest = (Chest) b.getState();
-
-            chest.setCustomName(UUID.randomUUID().toString());
-
-            int in = 0;
-            for (CommentNode<Comment> cn : comments.getReplies()) {
-                Comment c = cn.getSubject();
-                if (in < 26) {
-                    ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
-                    BookMeta bookmeta = (BookMeta) book.getItemMeta();
-                    bookmeta.setTitle("Comment");
-                    bookmeta.setAuthor("u/" + c.getAuthor());
-                    if (c.getBody().length() > 255) {
-                        double f = ceil(((float) c.getBody().length()) / 255f);
-                        for (int i = 0; i < f; i++) {
-                            if (c.getBody().length() < (i + 1) * 255) {
-                                bookmeta.addPage(c.getBody().substring(i * 255));
-                            } else {
-                                bookmeta.addPage(c.getBody().substring(i * 255, (i + 1) * 255));
-                            }
-                        }
-                    } else {
-                        bookmeta.addPage(c.getBody());
-                    }
-                    bookmeta.setLore(Arrays.asList(c.getId(), c.getBody()));
-                    bookmeta.setDisplayName(COMMENT_DISPLAY_NAME);
-                    book.setItemMeta(bookmeta);
-                    redditBrowserPlugin.commentCache.put(c.getId(), cn);
-                    chest.getInventory().addItem(book);
-                } else {
-                    break;
-                }
-                in++;
-            }
-        }
     }
 
     private void buildNewCommentButton() {
@@ -379,6 +273,49 @@ public class Room {
         spawnHologram(writeCommentsButton.getLocation().clone().add(.5, -2, .5), WRITE_COMMENT_HOLOGRAM);
     }
 
+    private void buildCommentHopper() {
+        Location chopperLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth() + 1);
+        final Block hopper = chopperLocation.getBlock();
+        hopper.setType(Material.HOPPER);
+        hopper.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.COMMENT_HOPPER));
+        hopper.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, owner.getUniqueId()));
+        spawnHologram(hopper.getLocation().clone().add(.5, -2, .5), REPLY_COMMENT_HOLOGRAM);
+    }
+
+
+    private void buildLeaveButton() {
+        Block leaveButton = location.getWorld().getBlockAt(location.clone().add(-(roomDimensions.getRoomWidth() / 2) - 1, -roomDimensions.getRoomHeight() + 2, -1));
+        leaveButton.setType(Material.OAK_BUTTON);
+        leaveButton.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.LEAVE));
+        leaveButton.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, owner.getUniqueId()));
+        leaveButton.setMetadata(BUTTON_ACTIVATED, new FixedMetadataValue(redditBrowserPlugin, false));
+        Directional leaveButtonDirectional = (Directional) leaveButton.getBlockData();
+        leaveButtonDirectional.setFacing(BlockFace.NORTH);
+        leaveButton.setBlockData(leaveButtonDirectional);
+        spawnHologram(leaveButton.getLocation().clone().add(.5, -2, .5), colorCode("c") + "Leave");
+    }
+
+    private void emptyCommentsHopper() {
+        Location chestLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2, -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth() + 1);
+        final Block block = chestLocation.getBlock();
+        if (Material.HOPPER.equals(block.getType())) {
+            Hopper hopper = (Hopper) block.getState();
+            hopper.getInventory().clear();
+        }
+    }
+
+    private void buildEmptyRoom() {
+        emptyCommentsHopper();
+        cube(ROOM_MATERIAL, location, location.clone().add(-roomDimensions.getRoomWidth(), -roomDimensions.getRoomHeight(), -roomDimensions.getRoomDepth()));
+        cube(Material.AIR, location.clone().add(-1, -1, -1), location.clone().add(-roomDimensions.getRoomWidth() + 1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
+    }
+
+    private void createRoom(
+            Submission submission) {
+        buildEmptyRoom();
+        updateRoom(submission);
+    }
+
     private void removeNewCommentsButton() {
         Location buttonLocation = location.clone().add(-roomDimensions.getRoomWidth() / 2 - 1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1);
         final Block writeCommentsButton = buttonLocation.getBlock();
@@ -389,6 +326,7 @@ public class Room {
         Block uv = location.getWorld().getBlockAt(location.clone().add(-roomDimensions.getRoomWidth() + 1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
         uv.setType(Material.OAK_BUTTON);
         uv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(redditBrowserPlugin, submission.getId()));
+        uv.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, getRoomId()));
         uv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.UPVOTE));
         Directional uvdir = (Directional) uv.getBlockData();
         uvdir.setFacing(BlockFace.SOUTH);
@@ -399,7 +337,9 @@ public class Room {
         Block dv = location.getWorld().getBlockAt(location.clone().add(-1, -roomDimensions.getRoomHeight() + 1, -roomDimensions.getRoomDepth() + 1));
         dv.setType(Material.OAK_BUTTON);
         dv.setMetadata(SUBMISSION_ID, new FixedMetadataValue(redditBrowserPlugin, submission.getId()));
+        dv.setMetadata(ROOM_ID, new FixedMetadataValue(redditBrowserPlugin, getRoomId()));
         dv.setMetadata(INTERACTIVE_ENUM, new FixedMetadataValue(redditBrowserPlugin, InteractiveEnum.DOWNVOTE));
+
 
         Directional dvdir = (Directional) dv.getBlockData();
         dvdir.setFacing(BlockFace.SOUTH);
@@ -407,7 +347,6 @@ public class Room {
 
         spawnHologram(dv.getLocation().clone().add(.5, -2, .5), colorCode("c") + "-1");
     }
-
 
 
     private void buildNavigationButton() {
@@ -474,8 +413,8 @@ public class Room {
         }
     }
 
-    private void spawnHologram(Location l, String name) {
-        ArmorStand as = (ArmorStand) l.getWorld().spawnEntity(l, EntityType.ARMOR_STAND);
+    public static void spawnHologram(Location location, String name) {
+        ArmorStand as = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
         as.setCustomName(name);
         as.setCustomNameVisible(true);
         as.setGravity(false);
@@ -562,5 +501,125 @@ public class Room {
 
     public RedditBrowserPlugin getRedditBrowserPlugin() {
         return redditBrowserPlugin;
+    }
+
+    public ScreenController getScreenController() {
+        return screenController;
+    }
+
+    public void showPost() {
+        if (currentSubmission != null) {
+            Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                Bukkit.getScheduler().runTask(
+                        redditBrowserPlugin,
+                        () -> {
+                            screenController.showPost(currentSubmission);
+                        });
+            });
+        }
+    }
+
+    public void showComment() {
+        if (currentSubmission != null) {
+            Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                final RootCommentNode comments = redditBrowserPlugin.redditClient
+                        .submission(currentSubmission.getId())
+                        .comments();
+                Bukkit.getScheduler().runTask(
+                        redditBrowserPlugin,
+                        () -> screenController.getCommentsController().updateComments(comments != null ? comments.getReplies() : Collections.emptyList()));
+            });
+        }
+    }
+
+    public CommentsController getCommentsController() {
+        return screenController.getCommentsController();
+    }
+
+    public void replyComment(String comment) {
+        if (ScreenModelType.POST.equals(getScreenController().getScreenModelType())) {
+            if (currentSubmission != null) {
+                final String currentSubmissionId = currentSubmission.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    try {
+                        redditBrowserPlugin.redditClient
+                                .submission(currentSubmissionId)
+                                .reply(comment);
+                        getPlayers().forEach(p -> p.sendMessage("You've replied to the post!"));
+                    } catch (ApiException apiException) {
+                        getPlayers().forEach(p->p.sendMessage("Error occurred: " + apiException.getExplanation()));
+                    }
+                });
+            }
+        } else if (ScreenModelType.COMMENT.equals(getScreenController().getScreenModelType())) {
+            final Comment current = getCommentsController().getCurrent();
+            if (current != null) {
+                final String currentId = current.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    try {
+                        redditBrowserPlugin.redditClient.comment(currentId).reply(comment);
+                        getPlayers().forEach(p -> p.sendMessage("You've replied to the comment!"));
+                    } catch (ApiException apiException) {
+                        getPlayers().forEach(p->p.sendMessage("Error occurred: " + apiException.getExplanation()));
+                    }
+                });
+            }
+        }
+    }
+
+    public void upvote() {
+        if (ScreenModelType.POST.equals(getScreenController().getScreenModelType())) {
+            if (currentSubmission != null) {
+                final String currentSubmissionId = currentSubmission.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    redditBrowserPlugin.redditClient.submission(currentSubmissionId).upvote();
+                    int karma = redditBrowserPlugin.redditClient.submission(currentSubmissionId).inspect().getScore();
+                    getPlayers().forEach(player -> {
+                        player.sendMessage(ChatColor.GREEN + "You have upvoted the post! It now has " + karma + " karma.");
+                        player.playSound(location, Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
+                    });
+                });
+            }
+        } else if (ScreenModelType.COMMENT.equals(getScreenController().getScreenModelType())) {
+            final Comment current = getCommentsController().getCurrent();
+            if (current != null) {
+                final String currentId = current.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    redditBrowserPlugin.redditClient.comment(currentId).upvote();
+                    getPlayers().forEach(player -> {
+                        player.sendMessage(ChatColor.GREEN + "You have upvoted the comment!");
+                        player.playSound(location, Sound.ENTITY_VILLAGER_YES, VOLUME, 1);
+                    });
+                });
+            }
+        }
+    }
+
+    public void downvote() {
+        if (ScreenModelType.POST.equals(getScreenController().getScreenModelType())) {
+            if (currentSubmission != null) {
+                final String currentSubmissionId = currentSubmission.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    redditBrowserPlugin.redditClient.submission(currentSubmissionId).downvote();
+                    int karma = redditBrowserPlugin.redditClient.submission(currentSubmissionId).inspect().getScore();
+                    getPlayers().forEach(player -> {
+                        player.sendMessage(ChatColor.RED + "You have downvoted the post! It now has " + karma + " karma.");
+                        player.playSound(location, Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
+                    });
+                });
+            }
+        } else if (ScreenModelType.COMMENT.equals(getScreenController().getScreenModelType())) {
+            final Comment current = getCommentsController().getCurrent();
+            if (current != null) {
+                final String currentId = current.getId();
+                Bukkit.getScheduler().runTaskAsynchronously(redditBrowserPlugin, () -> {
+                    redditBrowserPlugin.redditClient.comment(currentId).upvote();
+                    getPlayers().forEach(player -> {
+                        player.sendMessage(ChatColor.RED + "You have downvoted the comment!");
+                        player.playSound(location, Sound.ENTITY_VILLAGER_NO, VOLUME, 1);
+                    });
+                });
+            }
+        }
     }
 }
