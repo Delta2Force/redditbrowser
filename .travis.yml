@@ -2,3 +2,6 @@ language: java
 jdk: [ openjdk8 ]
 sudo: false
 script: mvn install
+cache:
+  directories:
+  - $HOME/.m2
